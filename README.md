@@ -294,14 +294,40 @@ docker compose up
 
 A new contributor should be able to run the project locally without cloud infrastructure or platform-specific orchestration.
 
+## Current Bootstrap Structure
+
+The repository now includes a first runnable scaffold:
+
+- `apps/web`: Next.js decision workspace shell
+- `apps/api`: FastAPI service with initial domain model and bootstrap endpoints
+- `packages/*`: reserved package boundaries for schemas, prompts, core logic, and shared UI
+- `examples/erp-adoption`: first example input for the MVP dossier flow
+- `docker-compose.yml`: local `web` + `api` + `postgres` runtime
+- `.env.example`: baseline environment variables
+
+## Getting Started
+
+1. Copy `.env.example` to `.env`
+2. Set `GEMINI_API_KEY`
+3. Run `docker compose up --build`
+4. Open `http://localhost:3000`
+5. Check the API at `http://localhost:8000/api/v1/health`
+
+Current status of the scaffold:
+
+- the frontend is a workspace-oriented shell, not a chat interface
+- the backend exposes the initial `Decision` model and a bootstrap example route
+- Postgres is provisioned in Docker Compose, but persistence is not wired yet
+- LiteLLM is included in the backend dependency plan, but the structured generation pipeline is still pending
+
 ## Current Status
 
 This repository is in the bootstrap phase. The current priorities are:
 
-- define product and technical boundaries clearly
-- establish documentation and implementation order
-- scaffold the monorepo and local runtime
-- implement the first end-to-end decision workflow
+- harden the scaffold into a usable local baseline
+- wire Postgres persistence for the core entities
+- implement the schema-validated AI pipeline
+- build the first end-to-end decision workflow
 
 See:
 
