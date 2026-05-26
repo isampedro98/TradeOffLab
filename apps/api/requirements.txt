@@ -3,7 +3,7 @@ uvicorn[standard]==0.34.2
 pydantic==2.11.5
 pydantic-settings==2.9.1
 sqlalchemy==2.0.41
+alembic==1.15.2
 psycopg[binary]==3.2.9
 httpx==0.28.1
 litellm==1.69.0
-

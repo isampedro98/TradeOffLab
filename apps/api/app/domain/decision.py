@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -32,3 +32,37 @@ class Decision(BaseModel):
     status: DecisionStatus
     created_at: datetime
 
+
+class DecisionCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str
+    question: str
+    context: str
+    type: DecisionType
+    status: DecisionStatus = DecisionStatus.DRAFT
+
+
+class DecisionUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = None
+    question: str | None = None
+    context: str | None = None
+    type: DecisionType | None = None
+    status: DecisionStatus | None = None
+
+
+def build_bootstrap_decision() -> Decision:
+    return Decision(
+        id="decision-erp-bootstrap",
+        title="ERPNext vs Tango vs Bejerman",
+        question="Should we adopt ERPNext instead of Tango or Bejerman?",
+        context=(
+            "Bootstrap example for the TradeOffLab MVP. "
+            "The goal is to model a local-first, structured decision workflow."
+        ),
+        type=DecisionType.ERP_ADOPTION,
+        status=DecisionStatus.DRAFT,
+        created_at=datetime.now(UTC),
+    )
