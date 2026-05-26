@@ -6,8 +6,8 @@ class Settings(BaseSettings):
     api_port: int = 8000
     database_url: str = "postgresql+psycopg://tradeofflab:tradeofflab@db:5432/tradeofflab"
     litellm_base_url: str = "http://litellm:4000"
-    litellm_model: str = "gemini/gemini-2.0-flash"
-    gemini_api_key: str = "replace-me"
+    litellm_model: str = "tradeofflab-default"
+    litellm_api_key: str = "tradeofflab-dev-key"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -17,4 +17,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

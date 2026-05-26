@@ -142,13 +142,13 @@ Example orchestration:
 
 ```text
 runDecisionAnalysis()
-├── generateDecisionFrame()
-├── generateCriteria()
-├── generateOptions()
-├── generateAssumptions()
-├── generateTradeoffMatrix()
-├── generateAdversarialReview()
-└── generateRecommendationMemo()
+|- generateDecisionFrame()
+|- generateCriteria()
+|- generateOptions()
+|- generateAssumptions()
+|- generateTradeoffMatrix()
+|- generateAdversarialReview()
+'- generateRecommendationMemo()
 ```
 
 Each step must:
@@ -225,22 +225,22 @@ Reference material:
 
 ```text
 tradeofflab/
-├── apps/
-│   ├── web/
-│   └── api/
-├── packages/
-│   ├── schemas/
-│   ├── prompts/
-│   ├── core/
-│   └── ui/
-├── examples/
-│   ├── erp-adoption/
-│   ├── cloud-provider-choice/
-│   └── build-vs-buy/
-├── docs/
-├── docker/
-├── .devcontainer/
-└── docker-compose.yml
+|- apps/
+|  |- web/
+|  '- api/
+|- packages/
+|  |- schemas/
+|  |- prompts/
+|  |- core/
+|  '- ui/
+|- examples/
+|  |- erp-adoption/
+|  |- cloud-provider-choice/
+|  '- build-vs-buy/
+|- docs/
+|- docker/
+|- .devcontainer/
+'- docker-compose.yml
 ```
 
 ## UI Direction
@@ -302,7 +302,8 @@ The repository now includes a first runnable scaffold:
 - `apps/api`: FastAPI service with initial domain model and bootstrap endpoints
 - `packages/*`: reserved package boundaries for schemas, prompts, core logic, and shared UI
 - `examples/erp-adoption`: first example input for the MVP dossier flow
-- `docker-compose.yml`: local `web` + `api` + `postgres` runtime
+- `docker-compose.yml`: local `web` + `api` + `postgres` + `litellm` runtime
+- `docker/litellm/config.yaml`: local LiteLLM proxy model mapping
 - `.env.example`: baseline environment variables
 
 ## Getting Started
@@ -312,13 +313,23 @@ The repository now includes a first runnable scaffold:
 3. Run `docker compose up --build`
 4. Open `http://localhost:3000`
 5. Check the API at `http://localhost:8000/api/v1/health`
+6. Check the LiteLLM proxy at `http://localhost:4000`
+
+Variables that matter for the current local stack:
+
+- `DATABASE_URL`: must point to `db:5432` because the API container reaches Postgres through the Compose service name
+- `LITELLM_BASE_URL`: must point to `http://litellm:4000` because the API container reaches LiteLLM through the Compose service name
+- `LITELLM_MODEL`: defaults to the local proxy alias `tradeofflab-default`
+- `LITELLM_MASTER_KEY`: secures the local LiteLLM proxy
+- `LITELLM_API_KEY`: the credential the backend will use when calling LiteLLM
+- `GEMINI_API_KEY`: the upstream provider key LiteLLM uses to reach Gemini
 
 Current status of the scaffold:
 
 - the frontend is a workspace-oriented shell, not a chat interface
 - the backend exposes the initial `Decision` model and a bootstrap example route
 - Postgres is provisioned in Docker Compose, but persistence is not wired yet
-- LiteLLM is included in the backend dependency plan, but the structured generation pipeline is still pending
+- LiteLLM is now wired as a local proxy service, but the structured generation pipeline is still pending
 
 ## Current Status
 

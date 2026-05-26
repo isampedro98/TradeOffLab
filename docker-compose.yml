@@ -15,22 +15,33 @@ services:
       timeout: 5s
       retries: 5
 
+  litellm:
+    image: docker.litellm.ai/berriai/litellm:main-latest
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-tradeofflab-dev-key}
+    ports:
+      - "${LITELLM_PROXY_PORT:-4000}:4000"
+    volumes:
+      - ./docker/litellm/config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    env_file:
-      - .env
     environment:
       API_HOST: ${API_HOST}
       API_PORT: ${API_PORT}
       DATABASE_URL: ${DATABASE_URL}
       LITELLM_BASE_URL: ${LITELLM_BASE_URL}
       LITELLM_MODEL: ${LITELLM_MODEL}
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      LITELLM_API_KEY: ${LITELLM_API_KEY:-tradeofflab-dev-key}
     depends_on:
       db:
         condition: service_healthy
+      litellm:
+        condition: service_started
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
@@ -42,8 +53,6 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    env_file:
-      - .env
     environment:
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
     depends_on:
@@ -57,4 +66,3 @@ services:
 
 volumes:
   postgres_data:
-
