@@ -26,17 +26,20 @@ class Decision(BaseModel):
 
     id: str = Field(description="Stable identifier for the decision.")
     title: str
+    decision_brief: str
     question: str
     context: str
     type: DecisionType
     status: DecisionStatus
     created_at: datetime
+    updated_at: datetime
 
 
 class DecisionCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str
+    decision_brief: str
     question: str
     context: str
     type: DecisionType
@@ -47,6 +50,7 @@ class DecisionUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str | None = None
+    decision_brief: str | None = None
     question: str | None = None
     context: str | None = None
     type: DecisionType | None = None
@@ -57,6 +61,7 @@ def build_bootstrap_decision() -> Decision:
     return Decision(
         id="decision-erp-bootstrap",
         title="ERPNext vs Tango vs Bejerman",
+        decision_brief="Evaluate three ERP options for local adoption and implementation risk.",
         question="Should we adopt ERPNext instead of Tango or Bejerman?",
         context=(
             "Bootstrap example for the TradeOffLab MVP. "
@@ -65,4 +70,5 @@ def build_bootstrap_decision() -> Decision:
         type=DecisionType.ERP_ADOPTION,
         status=DecisionStatus.DRAFT,
         created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )

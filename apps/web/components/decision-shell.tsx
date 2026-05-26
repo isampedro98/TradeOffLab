@@ -30,15 +30,18 @@ type DecisionStatus = "draft" | "in_review" | "recommended" | "archived";
 type Decision = {
   id: string;
   title: string;
+  decision_brief: string;
   question: string;
   context: string;
   type: DecisionType;
   status: DecisionStatus;
   created_at: string;
+  updated_at: string;
 };
 
 type CreateDecisionPayload = {
   title: string;
+  decision_brief: string;
   question: string;
   context: string;
   type: DecisionType;
@@ -53,6 +56,7 @@ const traceNotes = [
 
 const initialDraft: CreateDecisionPayload = {
   title: "",
+  decision_brief: "",
   question: "",
   context: "",
   type: "erp_adoption",
@@ -270,7 +274,7 @@ export function DecisionShell() {
                         isActive ? "text-paper/75" : "text-ink/65"
                       }`}
                     >
-                      {decision.question}
+                      {decision.decision_brief}
                     </p>
                   </button>
                 );
@@ -304,12 +308,12 @@ export function DecisionShell() {
               </div>
 
               <h2 className="mt-3 max-w-3xl font-[family-name:var(--font-heading)] text-3xl font-semibold leading-tight md:text-4xl">
-                {activeDecision?.question ??
+                {activeDecision?.decision_brief ??
                   "Create or seed a decision to start the workspace."}
               </h2>
 
               <p className="mt-4 max-w-2xl text-sm text-paper/75">
-                {activeDecision?.context ??
+                {activeDecision?.question ??
                   "The frontend is now tied to persisted records in Postgres through the API. Seed the ERP example or create a fresh decision frame from structured fields."}
               </p>
 
@@ -323,6 +327,9 @@ export function DecisionShell() {
                   </span>
                   <span className="rounded-full border border-paper/15 px-3 py-1">
                     {formatTimestamp(activeDecision.created_at)}
+                  </span>
+                  <span className="rounded-full border border-paper/15 px-3 py-1">
+                    Updated {formatTimestamp(activeDecision.updated_at)}
                   </span>
                 </div>
               ) : null}
@@ -402,6 +409,25 @@ export function DecisionShell() {
                       required
                       className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
                       placeholder="ERPNext vs Tango vs Bejerman"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                      Decision Brief
+                    </span>
+                    <textarea
+                      value={draft.decision_brief}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          decision_brief: event.target.value,
+                        }))
+                      }
+                      required
+                      rows={2}
+                      className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
+                      placeholder="Short summary of the decision and what is being evaluated."
                     />
                   </label>
 
@@ -515,7 +541,10 @@ export function DecisionShell() {
                       <p className="font-[family-name:var(--font-heading)] text-xl font-semibold text-ink">
                         {activeDecision.title}
                       </p>
-                      <p className="mt-2 leading-6">{activeDecision.question}</p>
+                      <p className="mt-2 leading-6">{activeDecision.decision_brief}</p>
+                      <p className="mt-3 leading-6 text-ink/70">
+                        {activeDecision.question}
+                      </p>
                     </div>
 
                     <div className="rounded-2xl bg-black/[0.03] p-4">

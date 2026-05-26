@@ -24,14 +24,17 @@ class DecisionRepository:
         return self._to_domain(record)
 
     def create(self, payload: DecisionCreate, *, decision_id: str | None = None) -> Decision:
+        now = datetime.now(UTC)
         record = DecisionRecord(
             id=decision_id or f"decision-{uuid4().hex}",
             title=payload.title,
+            decision_brief=payload.decision_brief,
             question=payload.question,
             context=payload.context,
             type=payload.type,
             status=payload.status,
-            created_at=datetime.now(UTC),
+            created_at=now,
+            updated_at=now,
         )
         self.session.add(record)
         self.session.commit()
@@ -46,6 +49,7 @@ class DecisionRepository:
         updates = payload.model_dump(exclude_unset=True)
         for field_name, value in updates.items():
             setattr(record, field_name, value)
+        record.updated_at = datetime.now(UTC)
 
         self.session.commit()
         self.session.refresh(record)
@@ -59,11 +63,13 @@ class DecisionRepository:
         record = DecisionRecord(
             id=decision.id,
             title=decision.title,
+            decision_brief=decision.decision_brief,
             question=decision.question,
             context=decision.context,
             type=decision.type,
             status=decision.status,
             created_at=decision.created_at,
+            updated_at=decision.updated_at,
         )
         self.session.add(record)
         self.session.commit()
@@ -75,9 +81,11 @@ class DecisionRepository:
         return Decision(
             id=record.id,
             title=record.title,
+            decision_brief=record.decision_brief,
             question=record.question,
             context=record.context,
             type=record.type,
             status=record.status,
             created_at=record.created_at,
+            updated_at=record.updated_at,
         )
