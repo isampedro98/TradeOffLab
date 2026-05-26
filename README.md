@@ -354,8 +354,10 @@ This repository is in the bootstrap phase. The current priorities are:
 See:
 
 - `docs/CHANGELOG.md`
+- `docs/DEVELOPMENT_DECISIONS.md`
 - `docs/TODOs.md`
 - `docs/ROADMAP.md`
+- `docs/WHY_THIS_REPO_EXISTS.md`
 
 ## License
 
