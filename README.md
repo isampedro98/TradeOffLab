@@ -298,12 +298,13 @@ A new contributor should be able to run the project locally without cloud infras
 
 The repository now includes a first runnable scaffold:
 
-- `apps/web`: Next.js decision workspace shell
-- `apps/api`: FastAPI service with initial domain model and bootstrap endpoints
+- `apps/web`: Next.js workspace wired to persisted decisions through the API
+- `apps/api`: FastAPI service with persisted `Decision` CRUD and bootstrap seeding
 - `packages/*`: reserved package boundaries for schemas, prompts, core logic, and shared UI
 - `examples/erp-adoption`: first example input for the MVP dossier flow
 - `docker-compose.yml`: local `web` + `api` + `postgres` + `litellm` runtime
 - `docker/litellm/config.yaml`: local LiteLLM proxy model mapping
+- `apps/api/alembic/*`: database migration setup with an initial `decisions` revision
 - `.env.example`: baseline environment variables
 
 ## Getting Started
@@ -314,6 +315,14 @@ The repository now includes a first runnable scaffold:
 4. Open `http://localhost:3000`
 5. Check the API at `http://localhost:8000/api/v1/health`
 6. Check the LiteLLM proxy at `http://localhost:4000`
+
+Useful API paths in the current build:
+
+- `GET /api/v1/decisions`
+- `POST /api/v1/decisions`
+- `GET /api/v1/decisions/{decision_id}`
+- `PATCH /api/v1/decisions/{decision_id}`
+- `POST /api/v1/decisions/seed/bootstrap-example`
 
 Variables that matter for the current local stack:
 
@@ -326,17 +335,19 @@ Variables that matter for the current local stack:
 
 Current status of the scaffold:
 
-- the frontend is a workspace-oriented shell, not a chat interface
-- the backend exposes the initial `Decision` model and a bootstrap example route
-- Postgres is provisioned in Docker Compose, but persistence is not wired yet
-- LiteLLM is now wired as a local proxy service, but the structured generation pipeline is still pending
+- the frontend is a workspace-oriented shell connected to real persisted decision records
+- the backend exposes persisted `Decision` CRUD and an idempotent bootstrap seed route
+- Postgres persistence is wired for `Decision`
+- Alembic migrations are wired and executed on API container startup
+- LiteLLM is wired as a local proxy service
+- structured AI generation pipelines are still pending
 
 ## Current Status
 
 This repository is in the bootstrap phase. The current priorities are:
 
-- harden the scaffold into a usable local baseline
-- wire Postgres persistence for the core entities
+- extend persistence beyond `Decision` into `Option` and `Criterion`
+- define the analysis application/service layer
 - implement the schema-validated AI pipeline
 - build the first end-to-end decision workflow
 

@@ -4,13 +4,24 @@ This backlog is intentionally biased toward the core MVP. It avoids speculative 
 
 ## Highest Priority
 
+- Model and persist `Option`
+- Model and persist `Criterion`
+- Add Alembic revisions as new persisted entities are introduced
+- Define the application/service layer for structured analysis orchestration
+- Define shared schemas package for decision-domain models
+- Expose richer decision-detail endpoints once related entities exist
+
+## Completed Recently
+
 - Scaffold monorepo folders: `apps`, `packages`, `examples`, `docs`, `docker`, `.devcontainer`
-- Create `docker-compose.yml` for `web`, `api`, and `postgres`
+- Create `docker-compose.yml` for `web`, `api`, `postgres`, and `litellm`
 - Create `.env.example` with local configuration for Postgres, LiteLLM, and Gemini
 - Bootstrap `apps/web` with Next.js, TypeScript, Tailwind, and shadcn/ui
 - Bootstrap `apps/api` with FastAPI, Pydantic, and a clear domain-first module layout
-- Define shared schemas package for decision-domain models
-- Define a persistence strategy for the MVP: simplest viable relational model first
+- Define the first persistence strategy for the MVP
+- Persist `Decision` records in Postgres
+- Wire the frontend workspace to persisted `Decision` CRUD
+- Add Alembic and an initial migration for the `decisions` table
 
 ## Core Domain
 
@@ -38,7 +49,9 @@ This backlog is intentionally biased toward the core MVP. It avoids speculative 
 ## MVP User Flows
 
 - Create a decision from a question and context
-- Edit the generated decision frame
+- Persist and reload a created decision through the workspace UI
+- Seed the ERP bootstrap example through the workspace UI
+- Edit a stored decision record
 - Add and edit options manually
 - Add and edit weighted criteria manually
 - Generate assumptions
@@ -59,7 +72,8 @@ This backlog is intentionally biased toward the core MVP. It avoids speculative 
 
 ## Persistence And Traceability
 
-- Store decisions locally in Postgres
+- Store options locally in Postgres
+- Store criteria locally in Postgres
 - Track generation metadata by pipeline step
 - Track prompt version or prompt identifier
 - Track model, provider, and timestamp for each generation
@@ -74,6 +88,7 @@ This backlog is intentionally biased toward the core MVP. It avoids speculative 
 
 ## Quality
 
+- Add API tests for `Decision` CRUD and migration bootstrapping
 - Add backend schema validation tests
 - Add pipeline contract tests for structured outputs
 - Add example snapshot tests for exported dossiers

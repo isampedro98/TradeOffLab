@@ -19,6 +19,10 @@ Exit criteria:
 - A new contributor can understand the product and technical direction from repo docs
 - The repo layout supports immediate implementation without architectural ambiguity
 
+Current status:
+
+- Completed
+
 ## Phase 1: Core Decision Workspace MVP
 
 Goal: deliver the first end-to-end decision analysis workflow locally.
@@ -38,6 +42,12 @@ Exit criteria:
 - A user can create a decision, run analysis, edit outputs, and export the dossier locally
 - All AI steps validate against explicit schemas
 - The product experience is workspace-first, not chat-first
+
+Current status:
+
+- In progress
+- `Decision` persistence, Alembic migrations, and a wired workspace shell are done
+- `Option`, `Criterion`, and generation flows are still pending
 
 ## Phase 2: Traceability Hardening
 

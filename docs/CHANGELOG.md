@@ -8,22 +8,24 @@ The format is intentionally lightweight during bootstrap. A stricter release for
 
 ### Added
 
-- Initial project definition for TradeOffLab
-- Product identity emphasizing decision engineering over chat
-- MVP scope and explicit non-goals
-- Core domain entity definitions
-- Initial AI pipeline direction based on deterministic structured outputs
-- Initial technology direction for web, API, database, and AI provider abstraction
-- Initial roadmap and implementation backlog documents
+- Monorepo scaffold for `apps`, `packages`, `examples`, and docs
+- Local Docker Compose runtime for `web`, `api`, `postgres`, and `litellm`
+- LiteLLM local proxy configuration for Gemini Flash
+- FastAPI `Decision` persistence with Postgres-backed CRUD
+- Alembic migration setup with an initial `decisions` table revision
+- Frontend workspace wired to persisted decisions through the API
+- ERP bootstrap seed flow from the UI and API
 
-### Planned
+### Changed
 
-- Monorepo scaffold under `apps/`, `packages/`, `examples/`, and `docs/`
-- Local Docker Compose environment
-- FastAPI API service
-- Next.js decision workspace
-- Shared schema package
-- First end-to-end decision example
+- README setup and current-state documentation now reflect the live stack
+- Web container startup now clears isolated Next.js build artifacts to avoid stale dev-cache failures
+
+### Pending
+
+- Persistence for `Option` and `Criterion`
+- Structured AI generation endpoints
+- End-to-end recommendation workflow
 
 ## [0.1.0-bootstrap] - 2026-05-25
 
