@@ -3,9 +3,22 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db_session
 from app.domain.decision import Decision, DecisionCreate, DecisionUpdate, build_bootstrap_decision
+from app.domain.option import Option, OptionCreate, OptionUpdate, build_bootstrap_options
 from app.persistence.decision_repository import DecisionRepository
+from app.persistence.option_repository import OptionRepository
 
 router = APIRouter()
+
+
+def require_decision(session: Session, decision_id: str) -> Decision:
+    repository = DecisionRepository(session)
+    decision = repository.get(decision_id)
+    if decision is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Decision '{decision_id}' was not found.",
+        )
+    return decision
 
 
 @router.get("", response_model=list[Decision])
@@ -28,14 +41,7 @@ def get_decision(
     decision_id: str,
     session: Session = Depends(get_db_session),
 ) -> Decision:
-    repository = DecisionRepository(session)
-    decision = repository.get(decision_id)
-    if decision is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Decision '{decision_id}' was not found.",
-        )
-    return decision
+    return require_decision(session, decision_id)
 
 
 @router.patch("/{decision_id}", response_model=Decision)
@@ -56,5 +62,86 @@ def update_decision(
 
 @router.post("/seed/bootstrap-example", response_model=Decision)
 def seed_bootstrap_example(session: Session = Depends(get_db_session)) -> Decision:
-    repository = DecisionRepository(session)
-    return repository.create_if_missing(build_bootstrap_decision())
+    decision_repository = DecisionRepository(session)
+    option_repository = OptionRepository(session)
+
+    decision = decision_repository.create_if_missing(build_bootstrap_decision())
+    for option in build_bootstrap_options(decision.id):
+        option_repository.create_if_missing(option)
+    return decision
+
+
+@router.get("/{decision_id}/options", response_model=list[Option])
+def list_decision_options(
+    decision_id: str,
+    session: Session = Depends(get_db_session),
+) -> list[Option]:
+    require_decision(session, decision_id)
+    repository = OptionRepository(session)
+    return repository.list_for_decision(decision_id)
+
+
+@router.post(
+    "/{decision_id}/options",
+    response_model=Option,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_decision_option(
+    decision_id: str,
+    payload: OptionCreate,
+    session: Session = Depends(get_db_session),
+) -> Option:
+    require_decision(session, decision_id)
+    repository = OptionRepository(session)
+    return repository.create(decision_id, payload)
+
+
+@router.get("/{decision_id}/options/{option_id}", response_model=Option)
+def get_decision_option(
+    decision_id: str,
+    option_id: str,
+    session: Session = Depends(get_db_session),
+) -> Option:
+    require_decision(session, decision_id)
+    repository = OptionRepository(session)
+    option = repository.get_for_decision(decision_id, option_id)
+    if option is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Option '{option_id}' was not found for decision '{decision_id}'.",
+        )
+    return option
+
+
+@router.patch("/{decision_id}/options/{option_id}", response_model=Option)
+def update_decision_option(
+    decision_id: str,
+    option_id: str,
+    payload: OptionUpdate,
+    session: Session = Depends(get_db_session),
+) -> Option:
+    require_decision(session, decision_id)
+    repository = OptionRepository(session)
+    option = repository.update(decision_id, option_id, payload)
+    if option is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Option '{option_id}' was not found for decision '{decision_id}'.",
+        )
+    return option
+
+
+@router.delete("/{decision_id}/options/{option_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_decision_option(
+    decision_id: str,
+    option_id: str,
+    session: Session = Depends(get_db_session),
+) -> None:
+    require_decision(session, decision_id)
+    repository = OptionRepository(session)
+    deleted = repository.delete(decision_id, option_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Option '{option_id}' was not found for decision '{decision_id}'.",
+        )
