@@ -24,8 +24,17 @@ const decisionTypes = [
   { value: "strategic_technical", label: "Strategic Technical" },
 ] as const;
 
+const criterionMeasurementTypes = [
+  { value: "qualitative", label: "Qualitative" },
+  { value: "numeric", label: "Numeric" },
+  { value: "boolean", label: "Boolean" },
+  { value: "ordinal", label: "Ordinal" },
+] as const;
+
 type DecisionType = (typeof decisionTypes)[number]["value"];
 type DecisionStatus = "draft" | "in_review" | "recommended" | "archived";
+type CriterionMeasurementType =
+  (typeof criterionMeasurementTypes)[number]["value"];
 
 type Decision = {
   id: string;
@@ -39,6 +48,37 @@ type Decision = {
   updated_at: string;
 };
 
+type OptionRecord = {
+  id: string;
+  decision_id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type CriterionRecord = {
+  id: string;
+  decision_id: string;
+  name: string;
+  description: string;
+  weight: number;
+  measurement_type: CriterionMeasurementType;
+  created_at: string;
+  updated_at: string;
+};
+
+type Assumption = {
+  id: string;
+  decision_id: string;
+  statement: string;
+  confidence: "low" | "medium" | "high";
+  impact_if_false: string;
+  validation_method: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type CreateDecisionPayload = {
   title: string;
   decision_brief: string;
@@ -48,19 +88,43 @@ type CreateDecisionPayload = {
   status: DecisionStatus;
 };
 
+type CreateOptionPayload = {
+  name: string;
+  description: string;
+};
+
+type CreateCriterionPayload = {
+  name: string;
+  description: string;
+  weight: string;
+  measurement_type: CriterionMeasurementType;
+};
+
 const traceNotes = [
   "Persisted decisions now come from the FastAPI API backed by Postgres.",
   "The ERP bootstrap example can be seeded once and then reused across runs.",
   "This workspace remains structured-first: stored records, explicit fields, no chat transcript.",
 ];
 
-const initialDraft: CreateDecisionPayload = {
+const initialDecisionDraft: CreateDecisionPayload = {
   title: "",
   decision_brief: "",
   question: "",
   context: "",
   type: "erp_adoption",
   status: "draft",
+};
+
+const initialOptionDraft: CreateOptionPayload = {
+  name: "",
+  description: "",
+};
+
+const initialCriterionDraft: CreateCriterionPayload = {
+  name: "",
+  description: "",
+  weight: "0.20",
+  measurement_type: "qualitative",
 };
 
 function apiUrl(path: string): string {
@@ -80,6 +144,20 @@ function typeLabel(type: DecisionType): string {
   return decisionTypes.find((item) => item.value === type)?.label ?? type;
 }
 
+function measurementTypeLabel(type: CriterionMeasurementType): string {
+  return (
+    criterionMeasurementTypes.find((item) => item.value === type)?.label ?? type
+  );
+}
+
+function confidenceLabel(confidence: Assumption["confidence"]): string {
+  return confidence.charAt(0).toUpperCase() + confidence.slice(1);
+}
+
+function normalizeText(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 function statusClasses(status: DecisionStatus): string {
   switch (status) {
     case "recommended":
@@ -95,18 +173,58 @@ function statusClasses(status: DecisionStatus): string {
 
 export function DecisionShell() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
+  const [options, setOptions] = useState<OptionRecord[]>([]);
+  const [criteria, setCriteria] = useState<CriterionRecord[]>([]);
+  const [assumptions, setAssumptions] = useState<Assumption[]>([]);
   const [activeDecisionId, setActiveDecisionId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<CreateDecisionPayload>(initialDraft);
+  const [decisionDraft, setDecisionDraft] =
+    useState<CreateDecisionPayload>(initialDecisionDraft);
+  const [optionDraft, setOptionDraft] =
+    useState<CreateOptionPayload>(initialOptionDraft);
+  const [criterionDraft, setCriterionDraft] =
+    useState<CreateCriterionPayload>(initialCriterionDraft);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const [isLoadingCriteria, setIsLoadingCriteria] = useState(false);
+  const [isLoadingAssumptions, setIsLoadingAssumptions] = useState(false);
+  const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
+  const [isSubmittingOption, setIsSubmittingOption] = useState(false);
+  const [isSubmittingCriterion, setIsSubmittingCriterion] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isGeneratingAssumptions, setIsGeneratingAssumptions] = useState(false);
+  const [decisionErrorMessage, setDecisionErrorMessage] = useState<string | null>(
+    null,
+  );
+  const [optionErrorMessage, setOptionErrorMessage] = useState<string | null>(
+    null,
+  );
+  const [criterionErrorMessage, setCriterionErrorMessage] = useState<
+    string | null
+  >(null);
+  const [assumptionErrorMessage, setAssumptionErrorMessage] = useState<
+    string | null
+  >(null);
+  const [assumptionSuccessMessage, setAssumptionSuccessMessage] = useState<
+    string | null
+  >(null);
 
   const activeDecision =
     decisions.find((decision) => decision.id === activeDecisionId) ?? null;
+  const canGenerateAssumptions =
+    !!activeDecision && options.length > 0 && criteria.length > 0;
+  const showDecisionBrief = activeDecision
+    ? normalizeText(activeDecision.decision_brief) !==
+      normalizeText(activeDecision.title)
+    : false;
+  const showDecisionQuestion = activeDecision
+    ? ![
+        normalizeText(activeDecision.title),
+        normalizeText(activeDecision.decision_brief),
+      ].includes(normalizeText(activeDecision.question))
+    : false;
 
   async function loadDecisions(preferredDecisionId?: string) {
-    setErrorMessage(null);
+    setDecisionErrorMessage(null);
 
     try {
       const response = await fetch(apiUrl("/api/v1/decisions"), {
@@ -145,12 +263,12 @@ export function DecisionShell() {
         setActiveDecisionId(payload[0]?.id ?? null);
       });
     } catch (error) {
-      setErrorMessage(
+      setDecisionErrorMessage(
         error instanceof Error ? error.message : "Failed to load decisions.",
       );
     } finally {
       setIsLoading(false);
-      setIsSubmitting(false);
+      setIsSubmittingDecision(false);
       setIsSeeding(false);
     }
   }
@@ -161,10 +279,109 @@ export function DecisionShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!activeDecisionId) {
+      setOptions([]);
+      setCriteria([]);
+      setAssumptions([]);
+      setOptionErrorMessage(null);
+      setCriterionErrorMessage(null);
+      setAssumptionErrorMessage(null);
+      return;
+    }
+
+    void Promise.all([
+      loadOptions(activeDecisionId),
+      loadCriteria(activeDecisionId),
+      loadAssumptions(activeDecisionId),
+    ]);
+  }, [activeDecisionId]);
+
+  async function loadOptions(decisionId: string) {
+    setIsLoadingOptions(true);
+    setOptionErrorMessage(null);
+
+    try {
+      const response = await fetch(apiUrl(`/api/v1/decisions/${decisionId}/options`), {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load options (${response.status})`);
+      }
+
+      const payload = (await response.json()) as OptionRecord[];
+      setOptions(payload);
+    } catch (error) {
+      setOptions([]);
+      setOptionErrorMessage(
+        error instanceof Error ? error.message : "Failed to load options.",
+      );
+    } finally {
+      setIsLoadingOptions(false);
+    }
+  }
+
+  async function loadCriteria(decisionId: string) {
+    setIsLoadingCriteria(true);
+    setCriterionErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${decisionId}/criteria`),
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to load criteria (${response.status})`);
+      }
+
+      const payload = (await response.json()) as CriterionRecord[];
+      setCriteria(payload);
+    } catch (error) {
+      setCriteria([]);
+      setCriterionErrorMessage(
+        error instanceof Error ? error.message : "Failed to load criteria.",
+      );
+    } finally {
+      setIsLoadingCriteria(false);
+    }
+  }
+
+  async function loadAssumptions(decisionId: string) {
+    setIsLoadingAssumptions(true);
+    setAssumptionErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${decisionId}/assumptions`),
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to load assumptions (${response.status})`);
+      }
+
+      const payload = (await response.json()) as Assumption[];
+      setAssumptions(payload);
+    } catch (error) {
+      setAssumptions([]);
+      setAssumptionErrorMessage(
+        error instanceof Error ? error.message : "Failed to load assumptions.",
+      );
+    } finally {
+      setIsLoadingAssumptions(false);
+    }
+  }
+
   async function handleCreateDecision(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsSubmitting(true);
-    setErrorMessage(null);
+    setIsSubmittingDecision(true);
+    setDecisionErrorMessage(null);
 
     try {
       const response = await fetch(apiUrl("/api/v1/decisions"), {
@@ -172,7 +389,7 @@ export function DecisionShell() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(draft),
+        body: JSON.stringify(decisionDraft),
       });
 
       if (!response.ok) {
@@ -180,11 +397,11 @@ export function DecisionShell() {
       }
 
       const created = (await response.json()) as Decision;
-      setDraft(initialDraft);
+      setDecisionDraft(initialDecisionDraft);
       await loadDecisions(created.id);
     } catch (error) {
-      setIsSubmitting(false);
-      setErrorMessage(
+      setIsSubmittingDecision(false);
+      setDecisionErrorMessage(
         error instanceof Error ? error.message : "Failed to create decision.",
       );
     }
@@ -192,7 +409,7 @@ export function DecisionShell() {
 
   async function handleSeedBootstrap() {
     setIsSeeding(true);
-    setErrorMessage(null);
+    setDecisionErrorMessage(null);
 
     try {
       const response = await fetch(apiUrl("/api/v1/decisions/seed/bootstrap-example"), {
@@ -207,15 +424,213 @@ export function DecisionShell() {
       await loadDecisions(seeded.id);
     } catch (error) {
       setIsSeeding(false);
-      setErrorMessage(
+      setDecisionErrorMessage(
         error instanceof Error ? error.message : "Failed to seed decision.",
       );
     }
   }
 
+  async function handleCreateOption(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeDecisionId) {
+      return;
+    }
+
+    setIsSubmittingOption(true);
+    setOptionErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/options`),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(optionDraft),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to create option (${response.status})`);
+      }
+
+      setOptionDraft(initialOptionDraft);
+      await loadOptions(activeDecisionId);
+      await loadDecisions(activeDecisionId);
+    } catch (error) {
+      setIsSubmittingOption(false);
+      setOptionErrorMessage(
+        error instanceof Error ? error.message : "Failed to create option.",
+      );
+    } finally {
+      setIsSubmittingOption(false);
+    }
+  }
+
+  async function handleDeleteOption(optionId: string) {
+    if (!activeDecisionId) {
+      return;
+    }
+
+    setOptionErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/options/${optionId}`),
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete option (${response.status})`);
+      }
+
+      await loadOptions(activeDecisionId);
+      await loadDecisions(activeDecisionId);
+    } catch (error) {
+      setOptionErrorMessage(
+        error instanceof Error ? error.message : "Failed to delete option.",
+      );
+    }
+  }
+
+  async function handleCreateCriterion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeDecisionId) {
+      return;
+    }
+
+    setIsSubmittingCriterion(true);
+    setCriterionErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/criteria`),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: criterionDraft.name,
+            description: criterionDraft.description,
+            weight: Number(criterionDraft.weight),
+            measurement_type: criterionDraft.measurement_type,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to create criterion (${response.status})`);
+      }
+
+      setCriterionDraft(initialCriterionDraft);
+      await loadCriteria(activeDecisionId);
+      await loadDecisions(activeDecisionId);
+    } catch (error) {
+      setIsSubmittingCriterion(false);
+      setCriterionErrorMessage(
+        error instanceof Error ? error.message : "Failed to create criterion.",
+      );
+    } finally {
+      setIsSubmittingCriterion(false);
+    }
+  }
+
+  async function handleDeleteCriterion(criterionId: string) {
+    if (!activeDecisionId) {
+      return;
+    }
+
+    setCriterionErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/criteria/${criterionId}`),
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete criterion (${response.status})`);
+      }
+
+      await loadCriteria(activeDecisionId);
+      await loadDecisions(activeDecisionId);
+    } catch (error) {
+      setCriterionErrorMessage(
+        error instanceof Error ? error.message : "Failed to delete criterion.",
+      );
+    }
+  }
+
+  async function handleGenerateAssumptions() {
+    if (!activeDecisionId || !canGenerateAssumptions) {
+      return;
+    }
+
+    setIsGeneratingAssumptions(true);
+    setAssumptionErrorMessage(null);
+    setAssumptionSuccessMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/assumptions/generate`),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            count: 4,
+            replace_existing: true,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        let detail = `Failed to generate assumptions (${response.status})`;
+
+        try {
+          const payload = (await response.json()) as { detail?: string };
+          if (payload.detail) {
+            detail = payload.detail;
+          }
+        } catch {
+          // Fall back to the generic HTTP status error above.
+        }
+
+        throw new Error(detail);
+      }
+
+      const payload = (await response.json()) as {
+        replaced_existing: boolean;
+        assumptions: Assumption[];
+      };
+      setAssumptions(payload.assumptions);
+      setAssumptionSuccessMessage(
+        payload.replaced_existing
+          ? `Generated ${payload.assumptions.length} assumptions and replaced the previous set.`
+          : `Generated ${payload.assumptions.length} assumptions.`,
+      );
+      await loadDecisions(activeDecisionId);
+    } catch (error) {
+      setAssumptionErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate assumptions.",
+      );
+    } finally {
+      setIsGeneratingAssumptions(false);
+    }
+  }
+
   return (
     <main className="min-h-screen px-4 py-6 md:px-8">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[260px_minmax(0,1fr)_340px]">
+      <div className="mx-auto grid max-w-[1500px] gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="rounded-[28px] border border-black/10 bg-white/70 p-5 shadow-panel backdrop-blur">
           <div className="mb-6">
             <p className="font-[family-name:var(--font-heading)] text-xs uppercase tracking-[0.35em] text-steel">
@@ -308,12 +723,12 @@ export function DecisionShell() {
               </div>
 
               <h2 className="mt-3 max-w-3xl font-[family-name:var(--font-heading)] text-3xl font-semibold leading-tight md:text-4xl">
-                {activeDecision?.decision_brief ??
+                {activeDecision?.title ??
                   "Create or seed a decision to start the workspace."}
               </h2>
 
               <p className="mt-4 max-w-2xl text-sm text-paper/75">
-                {activeDecision?.question ??
+                {activeDecision?.decision_brief ??
                   "The frontend is now tied to persisted records in Postgres through the API. Seed the ERP example or create a fresh decision frame from structured fields."}
               </p>
 
@@ -350,58 +765,541 @@ export function DecisionShell() {
               </div>
               <div className="rounded-[24px] border border-black/10 bg-paper p-5">
                 <p className="text-xs uppercase tracking-[0.3em] text-steel">
-                  Workspace Count
+                  Option Count
                 </p>
                 <p className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold">
-                  {isLoading ? "..." : decisions.length}
+                  {activeDecision ? options.length : "..."}
                 </p>
                 <p className="mt-2 text-sm text-ink/70">
-                  Persisted decision records currently available to the lab.
+                  Candidate options available for the current decision.
                 </p>
               </div>
               <div className="rounded-[24px] border border-black/10 bg-paper p-5">
                 <p className="text-xs uppercase tracking-[0.3em] text-steel">
-                  Output Mode
+                  Criteria Count
                 </p>
                 <p className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold">
-                  Structured
+                  {activeDecision ? criteria.length : "..."}
                 </p>
                 <p className="mt-2 text-sm text-ink/70">
-                  Stored records today, schema-validated generation next.
+                  Structured evaluation criteria loaded for this decision.
                 </p>
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="rounded-[28px] border border-black/10 bg-white/65 p-6">
+            <section className="rounded-[28px] border border-dashed border-black/15 bg-white/65 p-6">
+              <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                Active Record
+              </p>
+
+              {activeDecision ? (
+                <div className="mt-4 space-y-5 text-sm text-ink/80">
+                  <div>
+                    <p className="font-[family-name:var(--font-heading)] text-3xl font-semibold text-ink">
+                      {activeDecision.title}
+                    </p>
+                    {showDecisionBrief ? (
+                      <p className="mt-3 max-w-3xl text-lg leading-8 text-ink/80">
+                        {activeDecision.decision_brief}
+                      </p>
+                    ) : null}
+                    {showDecisionQuestion ? (
+                      <p className="mt-3 max-w-3xl leading-7 text-ink/70">
+                        {activeDecision.question}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 text-xs text-ink/65">
+                    <span className="rounded-full border border-black/10 px-3 py-1">
+                      {typeLabel(activeDecision.type)}
+                    </span>
+                    <span className="rounded-full border border-black/10 px-3 py-1">
+                      {activeDecision.status.replace("_", " ")}
+                    </span>
+                    <span className="rounded-full border border-black/10 px-3 py-1">
+                      Updated {formatTimestamp(activeDecision.updated_at)}
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl bg-black/[0.03] p-5">
+                    <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                      Context
+                    </p>
+                    <p className="mt-3 max-w-4xl leading-7">
+                      {activeDecision.context}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-ink/65">
+                  Nothing selected yet. Seed the ERP example or create a new
+                  decision record from the form below.
+                </p>
+              )}
+            </section>
+
+            <div className="grid gap-4 xl:grid-cols-2">
+              <section className="rounded-[28px] border border-black/10 bg-white/65 p-6">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-steel">
-                      Create Decision
+                      Options
                     </p>
-                    <h3 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold">
-                      Persist a new workspace entry
+                    <h3 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold text-ink">
+                      Candidate options
                     </h3>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleSeedBootstrap}
-                    disabled={isSeeding}
-                    className="rounded-full border border-ink px-4 py-2 text-sm font-medium text-ink transition hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isSeeding ? "Seeding..." : "Seed ERP Example"}
-                  </button>
+                  <span className="rounded-full bg-black/[0.04] px-3 py-1 text-xs text-ink/70">
+                    {options.length}
+                  </span>
                 </div>
 
-                <form onSubmit={handleCreateDecision} className="mt-6 space-y-4">
+                <div className="mt-5 space-y-3">
+                  {isLoadingOptions ? (
+                    <div className="rounded-2xl border border-dashed border-black/15 px-4 py-5 text-sm text-ink/65">
+                      Loading options...
+                    </div>
+                  ) : options.length > 0 ? (
+                    options.map((option) => (
+                      <article
+                        key={option.id}
+                        className="rounded-2xl border border-black/10 bg-paper p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-[family-name:var(--font-heading)] text-lg font-semibold text-ink">
+                              {option.name}
+                            </p>
+                            <p className="mt-2 text-sm leading-6 text-ink/75">
+                              {option.description}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteOption(option.id)}
+                            className="rounded-full border border-black/10 px-3 py-1 text-xs text-ink/65 transition hover:border-ink hover:text-ink"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-black/15 px-4 py-5 text-sm text-ink/65">
+                      No options yet. Add the alternatives you want to compare.
+                    </div>
+                  )}
+                </div>
+
+                <form onSubmit={handleCreateOption} className="mt-5 space-y-4">
+                  <label className="block">
+                    <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                      Option Name
+                    </span>
+                    <input
+                      value={optionDraft.name}
+                      onChange={(event) =>
+                        setOptionDraft((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
+                      required
+                      disabled={!activeDecision}
+                      className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink disabled:opacity-60"
+                      placeholder="ERPNext"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                      Description
+                    </span>
+                    <textarea
+                      value={optionDraft.description}
+                      onChange={(event) =>
+                        setOptionDraft((current) => ({
+                          ...current,
+                          description: event.target.value,
+                        }))
+                      }
+                      required
+                      disabled={!activeDecision}
+                      rows={3}
+                      className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink disabled:opacity-60"
+                      placeholder="Summarize why this option belongs in the decision set."
+                    />
+                  </label>
+
+                  {optionErrorMessage ? (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                      {optionErrorMessage}
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="submit"
+                    disabled={!activeDecision || isSubmittingOption}
+                    className="rounded-full border border-ink px-4 py-2 text-sm font-medium text-ink transition hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSubmittingOption ? "Saving..." : "Add Option"}
+                  </button>
+                </form>
+              </section>
+
+              <section className="rounded-[28px] border border-black/10 bg-white/65 p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                      Criteria
+                    </p>
+                    <h3 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold text-ink">
+                      Evaluation criteria
+                    </h3>
+                  </div>
+                  <span className="rounded-full bg-black/[0.04] px-3 py-1 text-xs text-ink/70">
+                    {criteria.length}
+                  </span>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  {isLoadingCriteria ? (
+                    <div className="rounded-2xl border border-dashed border-black/15 px-4 py-5 text-sm text-ink/65">
+                      Loading criteria...
+                    </div>
+                  ) : criteria.length > 0 ? (
+                    criteria.map((criterion) => (
+                      <article
+                        key={criterion.id}
+                        className="rounded-2xl border border-black/10 bg-paper p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex flex-wrap gap-2">
+                              <p className="font-[family-name:var(--font-heading)] text-lg font-semibold text-ink">
+                                {criterion.name}
+                              </p>
+                              <span className="rounded-full bg-black/[0.05] px-3 py-1 text-xs text-ink/70">
+                                Weight {criterion.weight}
+                              </span>
+                              <span className="rounded-full bg-black/[0.05] px-3 py-1 text-xs text-ink/70">
+                                {measurementTypeLabel(criterion.measurement_type)}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm leading-6 text-ink/75">
+                              {criterion.description}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCriterion(criterion.id)}
+                            className="rounded-full border border-black/10 px-3 py-1 text-xs text-ink/65 transition hover:border-ink hover:text-ink"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-black/15 px-4 py-5 text-sm text-ink/65">
+                      No criteria yet. Add the dimensions that will drive the tradeoff.
+                    </div>
+                  )}
+                </div>
+
+                <form onSubmit={handleCreateCriterion} className="mt-5 space-y-4">
+                  <label className="block">
+                    <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                      Criterion Name
+                    </span>
+                    <input
+                      value={criterionDraft.name}
+                      onChange={(event) =>
+                        setCriterionDraft((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
+                      required
+                      disabled={!activeDecision}
+                      className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink disabled:opacity-60"
+                      placeholder="Implementation Risk"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                      Description
+                    </span>
+                    <textarea
+                      value={criterionDraft.description}
+                      onChange={(event) =>
+                        setCriterionDraft((current) => ({
+                          ...current,
+                          description: event.target.value,
+                        }))
+                      }
+                      required
+                      disabled={!activeDecision}
+                      rows={3}
+                      className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink disabled:opacity-60"
+                      placeholder="Explain how this criterion should be evaluated."
+                    />
+                  </label>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                        Weight
+                      </span>
+                      <input
+                        value={criterionDraft.weight}
+                        onChange={(event) =>
+                          setCriterionDraft((current) => ({
+                            ...current,
+                            weight: event.target.value,
+                          }))
+                        }
+                        required
+                        disabled={!activeDecision}
+                        inputMode="decimal"
+                        className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink disabled:opacity-60"
+                        placeholder="0.20"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                        Measurement
+                      </span>
+                      <select
+                        value={criterionDraft.measurement_type}
+                        onChange={(event) =>
+                          setCriterionDraft((current) => ({
+                            ...current,
+                            measurement_type:
+                              event.target.value as CriterionMeasurementType,
+                          }))
+                        }
+                        disabled={!activeDecision}
+                        className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink disabled:opacity-60"
+                      >
+                        {criterionMeasurementTypes.map((type) => (
+                          <option key={type.value} value={type.value}>
+                            {type.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  {criterionErrorMessage ? (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                      {criterionErrorMessage}
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="submit"
+                    disabled={!activeDecision || isSubmittingCriterion}
+                    className="rounded-full border border-ink px-4 py-2 text-sm font-medium text-ink transition hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSubmittingCriterion ? "Saving..." : "Add Criterion"}
+                  </button>
+                </form>
+              </section>
+            </div>
+
+            <section className="rounded-[28px] border border-black/10 bg-white/65 p-6">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+                <div className="rounded-[24px] bg-ember px-5 py-6 text-paper">
+                  <p className="font-[family-name:var(--font-heading)] text-xs uppercase tracking-[0.3em] text-paper/75">
+                    Decision Trace
+                  </p>
+                  <p className="mt-4 max-w-2xl text-lg leading-8">
+                    The UI is now grounded in persisted records. The next layer
+                    is not more chat, it is traceable generation over stored
+                    decision state.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
+                  {traceNotes.map((note) => (
+                    <div
+                      key={note}
+                      className="rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm leading-6 text-ink/80"
+                    >
+                      {note}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-[28px] border border-black/10 bg-white/65 p-6">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Assumptions
+                  </p>
+                  <h3 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold text-ink">
+                    Structured assumption register
+                  </h3>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/70">
+                    Persisted assumptions tied to the active decision. Generation
+                    runs against the stored decision, options, and criteria.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGenerateAssumptions}
+                  disabled={!canGenerateAssumptions || isGeneratingAssumptions}
+                  className="rounded-full border border-ink px-4 py-2 text-sm font-medium text-ink transition hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isGeneratingAssumptions
+                    ? "Generating..."
+                    : "Generate Assumptions"}
+                </button>
+              </div>
+
+              <p className="mt-3 text-sm text-ink/65">
+                Generate Assumptions replaces the current assumption set for this
+                decision.
+              </p>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-black/10 bg-paper px-4 py-4 text-sm text-ink/75">
+                  <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Options
+                  </p>
+                  <p className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold text-ink">
+                    {options.length}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-black/10 bg-paper px-4 py-4 text-sm text-ink/75">
+                  <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Criteria
+                  </p>
+                  <p className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold text-ink">
+                    {criteria.length}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-black/10 bg-paper px-4 py-4 text-sm text-ink/75">
+                  <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Prerequisites
+                  </p>
+                  <p className="mt-2 font-[family-name:var(--font-heading)] text-lg font-semibold text-ink">
+                    {canGenerateAssumptions ? "Ready" : "Incomplete"}
+                  </p>
+                </div>
+              </div>
+
+              {activeDecision && !canGenerateAssumptions ? (
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  Assumption generation requires at least one option and one
+                  criterion. This decision currently has {options.length} options
+                  and {criteria.length} criteria.
+                </div>
+              ) : null}
+
+              {assumptionErrorMessage ? (
+                <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  {assumptionErrorMessage}
+                </div>
+              ) : null}
+
+              {assumptionSuccessMessage ? (
+                <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                  {assumptionSuccessMessage}
+                </div>
+              ) : null}
+
+              <div className="mt-6 grid gap-4 xl:grid-cols-2">
+                {isLoadingAssumptions ? (
+                  <div className="rounded-2xl border border-dashed border-black/15 px-4 py-5 text-sm text-ink/65">
+                    Loading assumptions...
+                  </div>
+                ) : assumptions.length > 0 ? (
+                  assumptions.map((assumption) => (
+                    <article
+                      key={assumption.id}
+                      className="rounded-[24px] border border-black/10 bg-paper p-5"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-black/[0.05] px-3 py-1 text-xs text-ink/70">
+                          {confidenceLabel(assumption.confidence)} confidence
+                        </span>
+                        <span className="rounded-full bg-black/[0.05] px-3 py-1 text-xs text-ink/70">
+                          Updated {formatTimestamp(assumption.updated_at)}
+                        </span>
+                      </div>
+
+                      <p className="mt-4 font-[family-name:var(--font-heading)] text-lg font-semibold text-ink">
+                        {assumption.statement}
+                      </p>
+
+                      <div className="mt-4 space-y-4 text-sm leading-6 text-ink/75">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                            Impact If False
+                          </p>
+                          <p className="mt-2">{assumption.impact_if_false}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                            Validation Method
+                          </p>
+                          <p className="mt-2">{assumption.validation_method}</p>
+                        </div>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-black/15 px-4 py-5 text-sm text-ink/65">
+                    No assumptions yet. Generate a set from the persisted decision
+                    frame once options and criteria are ready.
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-[28px] border border-black/10 bg-white/65 p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                    New Decision
+                  </p>
+                  <h3 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold">
+                    Add another workspace entry
+                  </h3>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/70">
+                    Keep the active analysis separate from the intake flow. Seed
+                    the ERP example or create a fresh decision record here.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSeedBootstrap}
+                  disabled={isSeeding}
+                  className="rounded-full border border-ink px-4 py-2 text-sm font-medium text-ink transition hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSeeding ? "Seeding..." : "Seed ERP Example"}
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateDecision} className="mt-6 space-y-4">
+                <div className="grid gap-4 xl:grid-cols-2">
                   <label className="block">
                     <span className="text-xs uppercase tracking-[0.3em] text-steel">
                       Title
                     </span>
                     <input
-                      value={draft.title}
+                      value={decisionDraft.title}
                       onChange={(event) =>
-                        setDraft((current) => ({
+                        setDecisionDraft((current) => ({
                           ...current,
                           title: event.target.value,
                         }))
@@ -416,177 +1314,121 @@ export function DecisionShell() {
                     <span className="text-xs uppercase tracking-[0.3em] text-steel">
                       Decision Brief
                     </span>
-                    <textarea
-                      value={draft.decision_brief}
+                    <input
+                      value={decisionDraft.decision_brief}
                       onChange={(event) =>
-                        setDraft((current) => ({
+                        setDecisionDraft((current) => ({
                           ...current,
                           decision_brief: event.target.value,
                         }))
                       }
                       required
-                      rows={2}
                       className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
                       placeholder="Short summary of the decision and what is being evaluated."
                     />
                   </label>
+                </div>
 
+                <label className="block">
+                  <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Question
+                  </span>
+                  <textarea
+                    value={decisionDraft.question}
+                    onChange={(event) =>
+                      setDecisionDraft((current) => ({
+                        ...current,
+                        question: event.target.value,
+                      }))
+                    }
+                    required
+                    rows={3}
+                    className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
+                    placeholder="Should we adopt ERPNext instead of Tango or Bejerman?"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Context
+                  </span>
+                  <textarea
+                    value={decisionDraft.context}
+                    onChange={(event) =>
+                      setDecisionDraft((current) => ({
+                        ...current,
+                        context: event.target.value,
+                      }))
+                    }
+                    required
+                    rows={4}
+                    className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
+                    placeholder="Describe the decision environment, constraints, and success criteria."
+                  />
+                </label>
+
+                <div className="grid gap-4 md:grid-cols-2">
                   <label className="block">
                     <span className="text-xs uppercase tracking-[0.3em] text-steel">
-                      Question
+                      Type
                     </span>
-                    <textarea
-                      value={draft.question}
+                    <select
+                      value={decisionDraft.type}
                       onChange={(event) =>
-                        setDraft((current) => ({
+                        setDecisionDraft((current) => ({
                           ...current,
-                          question: event.target.value,
+                          type: event.target.value as DecisionType,
                         }))
                       }
-                      required
-                      rows={3}
                       className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
-                      placeholder="Should we adopt ERPNext instead of Tango or Bejerman?"
-                    />
+                    >
+                      {decisionTypes.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
                   </label>
 
                   <label className="block">
                     <span className="text-xs uppercase tracking-[0.3em] text-steel">
-                      Context
+                      Status
                     </span>
-                    <textarea
-                      value={draft.context}
+                    <select
+                      value={decisionDraft.status}
                       onChange={(event) =>
-                        setDraft((current) => ({
+                        setDecisionDraft((current) => ({
                           ...current,
-                          context: event.target.value,
+                          status: event.target.value as DecisionStatus,
                         }))
                       }
-                      required
-                      rows={4}
                       className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
-                      placeholder="Describe the decision environment, constraints, and success criteria."
-                    />
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="in_review">In Review</option>
+                      <option value="recommended">Recommended</option>
+                      <option value="archived">Archived</option>
+                    </select>
                   </label>
+                </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <label className="block">
-                      <span className="text-xs uppercase tracking-[0.3em] text-steel">
-                        Type
-                      </span>
-                      <select
-                        value={draft.type}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            type: event.target.value as DecisionType,
-                          }))
-                        }
-                        className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
-                      >
-                        {decisionTypes.map((type) => (
-                          <option key={type.value} value={type.value}>
-                            {type.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="block">
-                      <span className="text-xs uppercase tracking-[0.3em] text-steel">
-                        Status
-                      </span>
-                      <select
-                        value={draft.status}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            status: event.target.value as DecisionStatus,
-                          }))
-                        }
-                        className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
-                      >
-                        <option value="draft">Draft</option>
-                        <option value="in_review">In Review</option>
-                        <option value="recommended">Recommended</option>
-                        <option value="archived">Archived</option>
-                      </select>
-                    </label>
+                {decisionErrorMessage ? (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    {decisionErrorMessage}
                   </div>
+                ) : null}
 
-                  {errorMessage ? (
-                    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                      {errorMessage}
-                    </div>
-                  ) : null}
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="rounded-full bg-ember px-5 py-3 text-sm font-semibold text-paper transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isSubmitting ? "Saving..." : "Create Decision"}
-                  </button>
-                </form>
-              </div>
-
-              <div className="rounded-[28px] border border-dashed border-black/15 bg-white/65 p-6">
-                <p className="text-xs uppercase tracking-[0.3em] text-steel">
-                  Active Record
-                </p>
-
-                {activeDecision ? (
-                  <div className="mt-4 space-y-4 text-sm text-ink/80">
-                    <div>
-                      <p className="font-[family-name:var(--font-heading)] text-xl font-semibold text-ink">
-                        {activeDecision.title}
-                      </p>
-                      <p className="mt-2 leading-6">{activeDecision.decision_brief}</p>
-                      <p className="mt-3 leading-6 text-ink/70">
-                        {activeDecision.question}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-black/[0.03] p-4">
-                      <p className="text-xs uppercase tracking-[0.3em] text-steel">
-                        Context
-                      </p>
-                      <p className="mt-3 leading-6">{activeDecision.context}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="mt-4 text-sm text-ink/65">
-                    Nothing selected yet. Seed the ERP example or create a new
-                    decision record from the form.
-                  </p>
-                )}
-              </div>
-            </div>
+                <button
+                  type="submit"
+                  disabled={isSubmittingDecision}
+                  className="rounded-full bg-ember px-5 py-3 text-sm font-semibold text-paper transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSubmittingDecision ? "Saving..." : "Create Decision"}
+                </button>
+              </form>
+            </section>
           </div>
         </section>
-
-        <aside className="rounded-[28px] border border-black/10 bg-white/70 p-5 shadow-panel backdrop-blur">
-          <div className="rounded-[24px] bg-ember px-4 py-5 text-paper">
-            <p className="font-[family-name:var(--font-heading)] text-xs uppercase tracking-[0.3em] text-paper/75">
-              Decision Trace
-            </p>
-            <p className="mt-3 text-sm leading-6">
-              The UI is now grounded in persisted records. The next layer is not
-              more chat, it is traceable generation over stored decision state.
-            </p>
-          </div>
-
-          <div className="mt-5 space-y-3">
-            {traceNotes.map((note) => (
-              <div
-                key={note}
-                className="rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-ink/80"
-              >
-                {note}
-              </div>
-            ))}
-          </div>
-        </aside>
       </div>
     </main>
   );

@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     litellm_base_url: str = "http://litellm:4000"
     litellm_model: str = "tradeofflab-default"
     litellm_api_key: str = "tradeofflab-dev-key"
+    litellm_timeout_seconds: float = 60.0
 
     model_config = SettingsConfigDict(
         env_file=".env",

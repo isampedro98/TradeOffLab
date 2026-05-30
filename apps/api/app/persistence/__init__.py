@@ -1,3 +1,13 @@
-from app.persistence import criterion_record, decision_record, option_record
+from app.persistence import (
+    assumption_record,
+    criterion_record,
+    decision_record,
+    option_record,
+)
 
-__all__ = ["criterion_record", "decision_record", "option_record"]
+__all__ = [
+    "assumption_record",
+    "criterion_record",
+    "decision_record",
+    "option_record",
+]
