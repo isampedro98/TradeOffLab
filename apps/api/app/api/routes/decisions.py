@@ -16,16 +16,23 @@ from app.domain.criterion import (
 )
 from app.domain.decision import Decision, DecisionCreate, DecisionUpdate, build_bootstrap_decision
 from app.domain.option import Option, OptionCreate, OptionUpdate, build_bootstrap_options
+from app.domain.tradeoff_matrix import TradeoffMatrix
 from app.persistence.assumption_repository import AssumptionRepository
 from app.persistence.criterion_repository import CriterionRepository
 from app.persistence.decision_repository import DecisionRepository
 from app.persistence.option_repository import OptionRepository
+from app.persistence.tradeoff_matrix_repository import TradeoffMatrixRepository
 from app.services.assumption_generation import (
     AssumptionGenerationRequest,
     AssumptionGenerationResponse,
     AssumptionGenerationService,
 )
 from app.services.litellm_client import LiteLLMError
+from app.services.tradeoff_matrix_generation import (
+    TradeoffMatrixGenerationRequest,
+    TradeoffMatrixGenerationResponse,
+    TradeoffMatrixGenerationService,
+)
 
 router = APIRouter()
 
@@ -275,6 +282,58 @@ def create_decision_assumption(
     require_decision(session, decision_id)
     repository = AssumptionRepository(session)
     return repository.create(decision_id, payload)
+
+
+@router.get("/{decision_id}/tradeoff-matrix", response_model=TradeoffMatrix)
+def get_decision_tradeoff_matrix(
+    decision_id: str,
+    session: Session = Depends(get_db_session),
+) -> TradeoffMatrix:
+    require_decision(session, decision_id)
+    repository = TradeoffMatrixRepository(session)
+    matrix = repository.get_for_decision(decision_id)
+    if matrix is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tradeoff matrix was not found for decision '{decision_id}'.",
+        )
+    return matrix
+
+
+@router.post(
+    "/{decision_id}/tradeoff-matrix/generate",
+    response_model=TradeoffMatrixGenerationResponse,
+)
+def generate_decision_tradeoff_matrix(
+    decision_id: str,
+    payload: TradeoffMatrixGenerationRequest,
+    session: Session = Depends(get_db_session),
+) -> TradeoffMatrixGenerationResponse:
+    require_decision(session, decision_id)
+    service = TradeoffMatrixGenerationService(session)
+    try:
+        return service.generate_for_decision(decision_id, payload)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
+    except LiteLLMError as error:
+        detail = str(error)
+        if error.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            detail = (
+                "The configured AI provider is rate-limiting this workspace right now. "
+                "Retry later or check the Gemini quota behind LiteLLM."
+            )
+        raise HTTPException(
+            status_code=error.status_code,
+            detail=detail,
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Tradeoff matrix generation failed: {error}",
+        ) from error
 
 
 @router.post(

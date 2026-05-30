@@ -3,6 +3,7 @@ from app.persistence import (
     criterion_record,
     decision_record,
     option_record,
+    tradeoff_matrix_record,
 )
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "criterion_record",
     "decision_record",
     "option_record",
+    "tradeoff_matrix_record",
 ]

@@ -4,12 +4,13 @@ This backlog is intentionally biased toward the core MVP. It avoids speculative 
 
 ## Highest Priority
 
-- Model and persist `Option`
-- Model and persist `Criterion`
 - Add Alembic revisions as new persisted entities are introduced
-- Define the application/service layer for structured analysis orchestration
 - Define shared schemas package for decision-domain models
 - Expose richer decision-detail endpoints once related entities exist
+- Implement `TradeoffMatrix`
+- Implement `AdversarialReview`
+- Implement `RecommendationMemo`
+- Export dossier as Markdown and JSON
 
 ## Completed Recently
 
@@ -22,6 +23,10 @@ This backlog is intentionally biased toward the core MVP. It avoids speculative 
 - Persist `Decision` records in Postgres
 - Wire the frontend workspace to persisted `Decision` CRUD
 - Add Alembic and an initial migration for the `decisions` table
+- Persist `Option`
+- Persist `Criterion`
+- Persist `Assumption`
+- Generate assumptions through LiteLLM with structured outputs
 
 ## Core Domain
 
@@ -106,3 +111,11 @@ This backlog is intentionally biased toward the core MVP. It avoids speculative 
 - autonomous agents
 - Kubernetes
 - SaaS-grade tenancy features
+
+## Nice To Have Later
+
+- Deep UI polish beyond obvious workflow friction
+- Chat-style interactions layered over the workspace
+- Broad refactors before the MVP decision flow is complete
+- Heavy CRUD expansion for non-core entities before synthesis is working
+- Advanced search, RAG, or retrieval layers

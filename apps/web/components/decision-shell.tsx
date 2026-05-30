@@ -79,6 +79,29 @@ type Assumption = {
   updated_at: string;
 };
 
+type TradeoffAssessment = {
+  id: string;
+  matrix_id: string;
+  criterion_id: string;
+  option_id: string;
+  score: number;
+  rationale: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type TradeoffMatrix = {
+  id: string;
+  decision_id: string;
+  summary: string;
+  scoring_scale_label: string;
+  provider: string;
+  model: string;
+  created_at: string;
+  updated_at: string;
+  assessments: TradeoffAssessment[];
+};
+
 type CreateDecisionPayload = {
   title: string;
   decision_brief: string;
@@ -176,6 +199,9 @@ export function DecisionShell() {
   const [options, setOptions] = useState<OptionRecord[]>([]);
   const [criteria, setCriteria] = useState<CriterionRecord[]>([]);
   const [assumptions, setAssumptions] = useState<Assumption[]>([]);
+  const [tradeoffMatrix, setTradeoffMatrix] = useState<TradeoffMatrix | null>(
+    null,
+  );
   const [activeDecisionId, setActiveDecisionId] = useState<string | null>(null);
   const [decisionDraft, setDecisionDraft] =
     useState<CreateDecisionPayload>(initialDecisionDraft);
@@ -187,11 +213,14 @@ export function DecisionShell() {
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isLoadingCriteria, setIsLoadingCriteria] = useState(false);
   const [isLoadingAssumptions, setIsLoadingAssumptions] = useState(false);
+  const [isLoadingTradeoffMatrix, setIsLoadingTradeoffMatrix] = useState(false);
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [isSubmittingOption, setIsSubmittingOption] = useState(false);
   const [isSubmittingCriterion, setIsSubmittingCriterion] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isGeneratingAssumptions, setIsGeneratingAssumptions] = useState(false);
+  const [isGeneratingTradeoffMatrix, setIsGeneratingTradeoffMatrix] =
+    useState(false);
   const [decisionErrorMessage, setDecisionErrorMessage] = useState<string | null>(
     null,
   );
@@ -204,14 +233,25 @@ export function DecisionShell() {
   const [assumptionErrorMessage, setAssumptionErrorMessage] = useState<
     string | null
   >(null);
+  const [tradeoffMatrixErrorMessage, setTradeoffMatrixErrorMessage] = useState<
+    string | null
+  >(null);
   const [assumptionSuccessMessage, setAssumptionSuccessMessage] = useState<
     string | null
   >(null);
+  const [tradeoffMatrixSuccessMessage, setTradeoffMatrixSuccessMessage] =
+    useState<string | null>(null);
 
   const activeDecision =
     decisions.find((decision) => decision.id === activeDecisionId) ?? null;
   const canGenerateAssumptions =
     !!activeDecision && options.length > 0 && criteria.length > 0;
+  const canGenerateTradeoffMatrix =
+    !!activeDecision &&
+    options.length > 0 &&
+    criteria.length > 0 &&
+    assumptions.length > 0;
+  const optionMap = new Map(options.map((option) => [option.id, option]));
   const showDecisionBrief = activeDecision
     ? normalizeText(activeDecision.decision_brief) !==
       normalizeText(activeDecision.title)
@@ -284,9 +324,11 @@ export function DecisionShell() {
       setOptions([]);
       setCriteria([]);
       setAssumptions([]);
+      setTradeoffMatrix(null);
       setOptionErrorMessage(null);
       setCriterionErrorMessage(null);
       setAssumptionErrorMessage(null);
+      setTradeoffMatrixErrorMessage(null);
       return;
     }
 
@@ -294,6 +336,7 @@ export function DecisionShell() {
       loadOptions(activeDecisionId),
       loadCriteria(activeDecisionId),
       loadAssumptions(activeDecisionId),
+      loadTradeoffMatrix(activeDecisionId),
     ]);
   }, [activeDecisionId]);
 
@@ -375,6 +418,41 @@ export function DecisionShell() {
       );
     } finally {
       setIsLoadingAssumptions(false);
+    }
+  }
+
+  async function loadTradeoffMatrix(decisionId: string) {
+    setIsLoadingTradeoffMatrix(true);
+    setTradeoffMatrixErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${decisionId}/tradeoff-matrix`),
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (response.status === 404) {
+        setTradeoffMatrix(null);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to load tradeoff matrix (${response.status})`);
+      }
+
+      const payload = (await response.json()) as TradeoffMatrix;
+      setTradeoffMatrix(payload);
+    } catch (error) {
+      setTradeoffMatrix(null);
+      setTradeoffMatrixErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to load tradeoff matrix.",
+      );
+    } finally {
+      setIsLoadingTradeoffMatrix(false);
     }
   }
 
@@ -625,6 +703,66 @@ export function DecisionShell() {
       );
     } finally {
       setIsGeneratingAssumptions(false);
+    }
+  }
+
+  async function handleGenerateTradeoffMatrix() {
+    if (!activeDecisionId || !canGenerateTradeoffMatrix) {
+      return;
+    }
+
+    setIsGeneratingTradeoffMatrix(true);
+    setTradeoffMatrixErrorMessage(null);
+    setTradeoffMatrixSuccessMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/tradeoff-matrix/generate`),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            replace_existing: true,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        let detail = `Failed to generate tradeoff matrix (${response.status})`;
+
+        try {
+          const payload = (await response.json()) as { detail?: string };
+          if (payload.detail) {
+            detail = payload.detail;
+          }
+        } catch {
+          // Fall back to the generic HTTP status error above.
+        }
+
+        throw new Error(detail);
+      }
+
+      const payload = (await response.json()) as {
+        replaced_existing: boolean;
+        matrix: TradeoffMatrix;
+      };
+      setTradeoffMatrix(payload.matrix);
+      setTradeoffMatrixSuccessMessage(
+        payload.replaced_existing
+          ? "Generated tradeoff matrix and replaced the previous version."
+          : "Generated tradeoff matrix.",
+      );
+      await loadDecisions(activeDecisionId);
+    } catch (error) {
+      setTradeoffMatrixErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate tradeoff matrix.",
+      );
+    } finally {
+      setIsGeneratingTradeoffMatrix(false);
     }
   }
 
@@ -1264,6 +1402,183 @@ export function DecisionShell() {
                   </div>
                 )}
               </div>
+            </section>
+
+            <section className="rounded-[28px] border border-black/10 bg-white/65 p-6">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Tradeoffs
+                  </p>
+                  <h3 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold text-ink">
+                    Structured tradeoff matrix
+                  </h3>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/70">
+                    Generate criterion-by-option assessments from the stored
+                    decision frame, assumptions, and weighted criteria.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGenerateTradeoffMatrix}
+                  disabled={!canGenerateTradeoffMatrix || isGeneratingTradeoffMatrix}
+                  className="rounded-full border border-ink px-4 py-2 text-sm font-medium text-ink transition hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isGeneratingTradeoffMatrix
+                    ? "Generating..."
+                    : "Generate Tradeoff Matrix"}
+                </button>
+              </div>
+
+              <p className="mt-3 text-sm text-ink/65">
+                Generate Tradeoff Matrix replaces the current matrix for this
+                decision.
+              </p>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-4">
+                <div className="rounded-2xl border border-black/10 bg-paper px-4 py-4 text-sm text-ink/75">
+                  <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Options
+                  </p>
+                  <p className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold text-ink">
+                    {options.length}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-black/10 bg-paper px-4 py-4 text-sm text-ink/75">
+                  <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Criteria
+                  </p>
+                  <p className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold text-ink">
+                    {criteria.length}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-black/10 bg-paper px-4 py-4 text-sm text-ink/75">
+                  <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Assumptions
+                  </p>
+                  <p className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold text-ink">
+                    {assumptions.length}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-black/10 bg-paper px-4 py-4 text-sm text-ink/75">
+                  <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Prerequisites
+                  </p>
+                  <p className="mt-2 font-[family-name:var(--font-heading)] text-lg font-semibold text-ink">
+                    {canGenerateTradeoffMatrix ? "Ready" : "Incomplete"}
+                  </p>
+                </div>
+              </div>
+
+              {activeDecision && !canGenerateTradeoffMatrix ? (
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  Tradeoff matrix generation requires at least one option, one
+                  criterion, and one assumption.
+                </div>
+              ) : null}
+
+              {tradeoffMatrixErrorMessage ? (
+                <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  {tradeoffMatrixErrorMessage}
+                </div>
+              ) : null}
+
+              {tradeoffMatrixSuccessMessage ? (
+                <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                  {tradeoffMatrixSuccessMessage}
+                </div>
+              ) : null}
+
+              {isLoadingTradeoffMatrix ? (
+                <div className="mt-6 rounded-2xl border border-dashed border-black/15 px-4 py-5 text-sm text-ink/65">
+                  Loading tradeoff matrix...
+                </div>
+              ) : tradeoffMatrix ? (
+                <div className="mt-6 space-y-5">
+                  <div className="rounded-2xl border border-black/10 bg-paper p-5">
+                    <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                      Matrix Summary
+                    </p>
+                    <p className="mt-3 text-sm leading-7 text-ink/80">
+                      {tradeoffMatrix.summary}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2 text-xs text-ink/65">
+                      <span className="rounded-full bg-black/[0.05] px-3 py-1">
+                        {tradeoffMatrix.scoring_scale_label}
+                      </span>
+                      <span className="rounded-full bg-black/[0.05] px-3 py-1">
+                        Model {tradeoffMatrix.model}
+                      </span>
+                      <span className="rounded-full bg-black/[0.05] px-3 py-1">
+                        Updated {formatTimestamp(tradeoffMatrix.updated_at)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {criteria.map((criterion) => {
+                      const criterionAssessments = tradeoffMatrix.assessments.filter(
+                        (assessment) => assessment.criterion_id === criterion.id,
+                      );
+                      if (criterionAssessments.length === 0) {
+                        return null;
+                      }
+
+                      return (
+                        <section
+                          key={criterion.id}
+                          className="rounded-2xl border border-black/10 bg-paper p-5"
+                        >
+                          <div className="flex flex-wrap gap-2">
+                            <p className="font-[family-name:var(--font-heading)] text-xl font-semibold text-ink">
+                              {criterion.name}
+                            </p>
+                            <span className="rounded-full bg-black/[0.05] px-3 py-1 text-xs text-ink/70">
+                              Weight {criterion.weight}
+                            </span>
+                            <span className="rounded-full bg-black/[0.05] px-3 py-1 text-xs text-ink/70">
+                              {measurementTypeLabel(criterion.measurement_type)}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-ink/70">
+                            {criterion.description}
+                          </p>
+
+                          <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                            {criterionAssessments.map((assessment) => {
+                              const option = optionMap.get(assessment.option_id);
+                              return (
+                                <article
+                                  key={assessment.id}
+                                  className="rounded-2xl border border-black/10 bg-white/70 p-4"
+                                >
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="font-[family-name:var(--font-heading)] text-lg font-semibold text-ink">
+                                      {option?.name ?? assessment.option_id}
+                                    </p>
+                                    <span className="rounded-full bg-black/[0.05] px-3 py-1 text-xs text-ink/70">
+                                      Score {assessment.score.toFixed(1)}
+                                    </span>
+                                  </div>
+                                  <p className="mt-3 text-sm leading-6 text-ink/75">
+                                    {assessment.rationale}
+                                  </p>
+                                </article>
+                              );
+                            })}
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-6 rounded-2xl border border-dashed border-black/15 px-4 py-5 text-sm text-ink/65">
+                  No tradeoff matrix yet. Generate one once the decision has
+                  options, criteria, and assumptions.
+                </div>
+              )}
             </section>
 
             <section className="rounded-[28px] border border-black/10 bg-white/65 p-6">
