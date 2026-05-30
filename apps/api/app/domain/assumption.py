@@ -45,49 +45,49 @@ def build_bootstrap_assumptions(decision_id: str) -> list[Assumption]:
     now = datetime.now(UTC)
     return [
         Assumption(
-            id=f"{decision_id}-assumption-customization-capacity",
+            id=f"{decision_id}-assumption-relational-workload",
             decision_id=decision_id,
             statement=(
-                "The organization can absorb the technical and operational effort required to customize ERPNext."
+                "The core workload for the next product phase will remain relational and transaction-heavy."
             ),
             confidence=AssumptionConfidence.MEDIUM,
             impact_if_false=(
-                "ERPNext could become slower and more expensive to adopt than expected."
+                "A non-relational or analytics-heavy workload would weaken the relevance of this database comparison."
             ),
             validation_method=(
-                "Review internal technical capacity, implementation partner availability, and past ERP rollout capability."
+                "Review current service boundaries, query patterns, and expected growth in transactional volume."
             ),
             created_at=now,
             updated_at=now,
         ),
         Assumption(
-            id=f"{decision_id}-assumption-local-support-matters",
+            id=f"{decision_id}-assumption-license-sensitivity",
             decision_id=decision_id,
             statement=(
-                "Strong local support and market familiarity are materially important for successful ERP adoption."
+                "Licensing cost and vendor lock-in are material concerns for the platform team."
             ),
-            confidence=AssumptionConfidence.HIGH,
+            confidence=AssumptionConfidence.MEDIUM,
             impact_if_false=(
-                "Local incumbents may be overvalued relative to more flexible alternatives."
+                "A commercial platform may be undervalued if budget sensitivity is lower than assumed."
             ),
             validation_method=(
-                "Interview stakeholders responsible for operations, support expectations, and implementation escalation paths."
+                "Validate budget constraints and procurement posture with engineering leadership and finance."
             ),
             created_at=now,
             updated_at=now,
         ),
         Assumption(
-            id=f"{decision_id}-assumption-cost-weighting",
+            id=f"{decision_id}-assumption-managed-hosting",
             decision_id=decision_id,
             statement=(
-                "Total cost of ownership should remain one of the highest-weighted criteria in the ERP decision."
+                "The team can rely on managed hosting or strong automation for backups, failover, and monitoring."
             ),
             confidence=AssumptionConfidence.MEDIUM,
             impact_if_false=(
-                "The current recommendation framing may overweight cost relative to strategic fit or execution risk."
+                "Operational burden would become a heavier decision factor than currently reflected."
             ),
             validation_method=(
-                "Validate weighting with leadership and compare against business priorities for the next 24 months."
+                "Confirm infrastructure strategy, SRE capacity, and hosting constraints before final selection."
             ),
             created_at=now,
             updated_at=now,

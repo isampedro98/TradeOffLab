@@ -125,7 +125,7 @@ type CreateCriterionPayload = {
 
 const traceNotes = [
   "Persisted decisions now come from the FastAPI API backed by Postgres.",
-  "The ERP bootstrap example can be seeded once and then reused across runs.",
+  "A database-platform example remains available as a bootstrap fixture through the API.",
   "This workspace remains structured-first: stored records, explicit fields, no chat transcript.",
 ];
 
@@ -134,7 +134,7 @@ const initialDecisionDraft: CreateDecisionPayload = {
   decision_brief: "",
   question: "",
   context: "",
-  type: "erp_adoption",
+  type: "software_stack",
   status: "draft",
 };
 
@@ -209,6 +209,7 @@ export function DecisionShell() {
     useState<CreateOptionPayload>(initialOptionDraft);
   const [criterionDraft, setCriterionDraft] =
     useState<CreateCriterionPayload>(initialCriterionDraft);
+  const [isCreateDecisionOpen, setIsCreateDecisionOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isLoadingCriteria, setIsLoadingCriteria] = useState(false);
@@ -217,7 +218,6 @@ export function DecisionShell() {
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [isSubmittingOption, setIsSubmittingOption] = useState(false);
   const [isSubmittingCriterion, setIsSubmittingCriterion] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
   const [isGeneratingAssumptions, setIsGeneratingAssumptions] = useState(false);
   const [isGeneratingTradeoffMatrix, setIsGeneratingTradeoffMatrix] =
     useState(false);
@@ -309,7 +309,6 @@ export function DecisionShell() {
     } finally {
       setIsLoading(false);
       setIsSubmittingDecision(false);
-      setIsSeeding(false);
     }
   }
 
@@ -456,6 +455,18 @@ export function DecisionShell() {
     }
   }
 
+  function openCreateDecisionModal() {
+    setDecisionErrorMessage(null);
+    setDecisionDraft(initialDecisionDraft);
+    setIsCreateDecisionOpen(true);
+  }
+
+  function closeCreateDecisionModal() {
+    setDecisionErrorMessage(null);
+    setDecisionDraft(initialDecisionDraft);
+    setIsCreateDecisionOpen(false);
+  }
+
   async function handleCreateDecision(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmittingDecision(true);
@@ -477,33 +488,11 @@ export function DecisionShell() {
       const created = (await response.json()) as Decision;
       setDecisionDraft(initialDecisionDraft);
       await loadDecisions(created.id);
+      setIsCreateDecisionOpen(false);
     } catch (error) {
       setIsSubmittingDecision(false);
       setDecisionErrorMessage(
         error instanceof Error ? error.message : "Failed to create decision.",
-      );
-    }
-  }
-
-  async function handleSeedBootstrap() {
-    setIsSeeding(true);
-    setDecisionErrorMessage(null);
-
-    try {
-      const response = await fetch(apiUrl("/api/v1/decisions/seed/bootstrap-example"), {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to seed bootstrap decision (${response.status})`);
-      }
-
-      const seeded = (await response.json()) as Decision;
-      await loadDecisions(seeded.id);
-    } catch (error) {
-      setIsSeeding(false);
-      setDecisionErrorMessage(
-        error instanceof Error ? error.message : "Failed to seed decision.",
       );
     }
   }
@@ -767,8 +756,9 @@ export function DecisionShell() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-6 md:px-8">
-      <div className="mx-auto grid max-w-[1500px] gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+    <>
+      <main className="min-h-screen px-4 py-6 md:px-8">
+        <div className="mx-auto grid max-w-[1500px] gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="rounded-[28px] border border-black/10 bg-white/70 p-5 shadow-panel backdrop-blur">
           <div className="mb-6">
             <p className="font-[family-name:var(--font-heading)] text-xs uppercase tracking-[0.35em] text-steel">
@@ -799,9 +789,18 @@ export function DecisionShell() {
               <p className="text-xs uppercase tracking-[0.3em] text-steel">
                 Decisions
               </p>
-              <span className="rounded-full bg-black/[0.04] px-2 py-1 text-xs text-ink/70">
-                {decisions.length}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-black/[0.04] px-2 py-1 text-xs text-ink/70">
+                  {decisions.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={openCreateDecisionModal}
+                  className="rounded-full border border-black/10 px-3 py-1 text-xs font-medium text-ink transition hover:border-ink hover:bg-ink hover:text-paper"
+                >
+                  New
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -862,12 +861,12 @@ export function DecisionShell() {
 
               <h2 className="mt-3 max-w-3xl font-[family-name:var(--font-heading)] text-3xl font-semibold leading-tight md:text-4xl">
                 {activeDecision?.title ??
-                  "Create or seed a decision to start the workspace."}
+                  "Create a decision to start the workspace."}
               </h2>
 
               <p className="mt-4 max-w-2xl text-sm text-paper/75">
                 {activeDecision?.decision_brief ??
-                  "The frontend is now tied to persisted records in Postgres through the API. Seed the ERP example or create a fresh decision frame from structured fields."}
+                  "The frontend is now tied to persisted records in Postgres through the API. Create a fresh decision frame from structured fields and build the analysis in-place."}
               </p>
 
               {activeDecision ? (
@@ -971,8 +970,8 @@ export function DecisionShell() {
                 </div>
               ) : (
                 <p className="mt-4 text-sm text-ink/65">
-                  Nothing selected yet. Seed the ERP example or create a new
-                  decision record from the form below.
+                  Nothing selected yet. Open New Decision to create a fresh
+                  workspace entry.
                 </p>
               )}
             </section>
@@ -1581,158 +1580,165 @@ export function DecisionShell() {
               )}
             </section>
 
-            <section className="rounded-[28px] border border-black/10 bg-white/65 p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-steel">
-                    New Decision
-                  </p>
-                  <h3 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold">
-                    Add another workspace entry
-                  </h3>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/70">
-                    Keep the active analysis separate from the intake flow. Seed
-                    the ERP example or create a fresh decision record here.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleSeedBootstrap}
-                  disabled={isSeeding}
-                  className="rounded-full border border-ink px-4 py-2 text-sm font-medium text-ink transition hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSeeding ? "Seeding..." : "Seed ERP Example"}
-                </button>
+          </div>
+        </section>
+        </div>
+      </main>
+
+      {isCreateDecisionOpen ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/45 px-4 py-8 backdrop-blur-sm">
+          <div className="w-full max-w-5xl rounded-[28px] border border-black/10 bg-white p-6 shadow-panel">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-steel">
+                  New Decision
+                </p>
+                <h3 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold text-ink">
+                  Add another workspace entry
+                </h3>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/70">
+                  Keep the active analysis separate from intake. Create the decision
+                  record here, then continue the analysis in the main workspace.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeCreateDecisionModal}
+                className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium text-ink transition hover:border-ink hover:bg-ink hover:text-paper"
+              >
+                Close
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateDecision} className="mt-6 space-y-4">
+              <div className="grid gap-4 xl:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Title
+                  </span>
+                  <input
+                    value={decisionDraft.title}
+                    onChange={(event) =>
+                      setDecisionDraft((current) => ({
+                        ...current,
+                        title: event.target.value,
+                      }))
+                    }
+                    required
+                    className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
+                    placeholder="PostgreSQL vs MySQL vs SQL Server"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                    Decision Brief
+                  </span>
+                  <input
+                    value={decisionDraft.decision_brief}
+                    onChange={(event) =>
+                      setDecisionDraft((current) => ({
+                        ...current,
+                        decision_brief: event.target.value,
+                      }))
+                    }
+                    required
+                    className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
+                    placeholder="Short summary of the decision and what is being evaluated."
+                  />
+                </label>
               </div>
 
-              <form onSubmit={handleCreateDecision} className="mt-6 space-y-4">
-                <div className="grid gap-4 xl:grid-cols-2">
-                  <label className="block">
-                    <span className="text-xs uppercase tracking-[0.3em] text-steel">
-                      Title
-                    </span>
-                    <input
-                      value={decisionDraft.title}
-                      onChange={(event) =>
-                        setDecisionDraft((current) => ({
-                          ...current,
-                          title: event.target.value,
-                        }))
-                      }
-                      required
-                      className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
-                      placeholder="ERPNext vs Tango vs Bejerman"
-                    />
-                  </label>
+              <label className="block">
+                <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                  Question
+                </span>
+                <textarea
+                  value={decisionDraft.question}
+                  onChange={(event) =>
+                    setDecisionDraft((current) => ({
+                      ...current,
+                      question: event.target.value,
+                    }))
+                  }
+                  required
+                  rows={3}
+                  className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
+                  placeholder="Which primary OLTP database should we standardize on for the next product phase?"
+                />
+              </label>
 
-                  <label className="block">
-                    <span className="text-xs uppercase tracking-[0.3em] text-steel">
-                      Decision Brief
-                    </span>
-                    <input
-                      value={decisionDraft.decision_brief}
-                      onChange={(event) =>
-                        setDecisionDraft((current) => ({
-                          ...current,
-                          decision_brief: event.target.value,
-                        }))
-                      }
-                      required
-                      className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
-                      placeholder="Short summary of the decision and what is being evaluated."
-                    />
-                  </label>
-                </div>
+              <label className="block">
+                <span className="text-xs uppercase tracking-[0.3em] text-steel">
+                  Context
+                </span>
+                <textarea
+                  value={decisionDraft.context}
+                  onChange={(event) =>
+                    setDecisionDraft((current) => ({
+                      ...current,
+                      context: event.target.value,
+                    }))
+                  }
+                  required
+                  rows={4}
+                  className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
+                  placeholder="Describe the workload, operational constraints, hosting assumptions, and success criteria."
+                />
+              </label>
 
+              <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="text-xs uppercase tracking-[0.3em] text-steel">
-                    Question
+                    Type
                   </span>
-                  <textarea
-                    value={decisionDraft.question}
+                  <select
+                    value={decisionDraft.type}
                     onChange={(event) =>
                       setDecisionDraft((current) => ({
                         ...current,
-                        question: event.target.value,
+                        type: event.target.value as DecisionType,
                       }))
                     }
-                    required
-                    rows={3}
                     className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
-                    placeholder="Should we adopt ERPNext instead of Tango or Bejerman?"
-                  />
+                  >
+                    {decisionTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
                 <label className="block">
                   <span className="text-xs uppercase tracking-[0.3em] text-steel">
-                    Context
+                    Status
                   </span>
-                  <textarea
-                    value={decisionDraft.context}
+                  <select
+                    value={decisionDraft.status}
                     onChange={(event) =>
                       setDecisionDraft((current) => ({
                         ...current,
-                        context: event.target.value,
+                        status: event.target.value as DecisionStatus,
                       }))
                     }
-                    required
-                    rows={4}
                     className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
-                    placeholder="Describe the decision environment, constraints, and success criteria."
-                  />
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="in_review">In Review</option>
+                    <option value="recommended">Recommended</option>
+                    <option value="archived">Archived</option>
+                  </select>
                 </label>
+              </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="block">
-                    <span className="text-xs uppercase tracking-[0.3em] text-steel">
-                      Type
-                    </span>
-                    <select
-                      value={decisionDraft.type}
-                      onChange={(event) =>
-                        setDecisionDraft((current) => ({
-                          ...current,
-                          type: event.target.value as DecisionType,
-                        }))
-                      }
-                      className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
-                    >
-                      {decisionTypes.map((type) => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="block">
-                    <span className="text-xs uppercase tracking-[0.3em] text-steel">
-                      Status
-                    </span>
-                    <select
-                      value={decisionDraft.status}
-                      onChange={(event) =>
-                        setDecisionDraft((current) => ({
-                          ...current,
-                          status: event.target.value as DecisionStatus,
-                        }))
-                      }
-                      className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
-                    >
-                      <option value="draft">Draft</option>
-                      <option value="in_review">In Review</option>
-                      <option value="recommended">Recommended</option>
-                      <option value="archived">Archived</option>
-                    </select>
-                  </label>
+              {decisionErrorMessage ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  {decisionErrorMessage}
                 </div>
+              ) : null}
 
-                {decisionErrorMessage ? (
-                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                    {decisionErrorMessage}
-                  </div>
-                ) : null}
-
+              <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="submit"
                   disabled={isSubmittingDecision}
@@ -1740,11 +1746,18 @@ export function DecisionShell() {
                 >
                   {isSubmittingDecision ? "Saving..." : "Create Decision"}
                 </button>
-              </form>
-            </section>
+                <button
+                  type="button"
+                  onClick={closeCreateDecisionModal}
+                  className="rounded-full border border-black/10 px-5 py-3 text-sm font-medium text-ink transition hover:border-ink hover:bg-ink hover:text-paper"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
-        </section>
-      </div>
-    </main>
+        </div>
+      ) : null}
+    </>
   );
 }

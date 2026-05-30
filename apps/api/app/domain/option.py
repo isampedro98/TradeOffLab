@@ -32,34 +32,34 @@ def build_bootstrap_options(decision_id: str) -> list[Option]:
     now = datetime.now(UTC)
     return [
         Option(
-            id=f"{decision_id}-option-erpnext",
+            id=f"{decision_id}-option-postgresql",
             decision_id=decision_id,
-            name="ERPNext",
+            name="PostgreSQL",
             description=(
-                "Open-source ERP with strong flexibility, broad customization options, "
-                "and lower licensing cost, but more implementation ownership."
+                "Open-source relational database with strong standards support, rich extensions, "
+                "and broad adoption across modern application stacks."
             ),
             created_at=now,
             updated_at=now,
         ),
         Option(
-            id=f"{decision_id}-option-tango",
+            id=f"{decision_id}-option-mysql",
             decision_id=decision_id,
-            name="Tango",
+            name="MySQL",
             description=(
-                "Established ERP option with local market familiarity and vendor support, "
-                "but potentially less flexibility and higher long-term licensing cost."
+                "Widely deployed relational database with strong hosting availability, "
+                "familiar operational patterns, and a mature ecosystem."
             ),
             created_at=now,
             updated_at=now,
         ),
         Option(
-            id=f"{decision_id}-option-bejerman",
+            id=f"{decision_id}-option-sqlserver",
             decision_id=decision_id,
-            name="Bejerman",
+            name="SQL Server",
             description=(
-                "Local ERP candidate with known administrative workflows and support channels, "
-                "but with tradeoffs around adaptability and ecosystem breadth."
+                "Commercial database platform with strong Microsoft integration, "
+                "mature tooling, and enterprise support, but with licensing exposure."
             ),
             created_at=now,
             updated_at=now,

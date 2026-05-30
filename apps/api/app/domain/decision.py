@@ -59,15 +59,17 @@ class DecisionUpdate(BaseModel):
 
 def build_bootstrap_decision() -> Decision:
     return Decision(
-        id="decision-erp-bootstrap",
-        title="ERPNext vs Tango vs Bejerman",
-        decision_brief="Evaluate three ERP options for local adoption and implementation risk.",
-        question="Should we adopt ERPNext instead of Tango or Bejerman?",
+        id="decision-database-bootstrap",
+        title="PostgreSQL vs MySQL vs SQL Server",
+        decision_brief="Evaluate three database platforms for the next transactional product stack.",
+        question="Which primary OLTP database should we standardize on for the next product phase?",
         context=(
             "Bootstrap example for the TradeOffLab MVP. "
-            "The goal is to model a local-first, structured decision workflow."
+            "The team is choosing a default relational database for a new multi-service product. "
+            "The decision must balance operational complexity, ecosystem fit, licensing exposure, "
+            "and long-term maintainability."
         ),
-        type=DecisionType.ERP_ADOPTION,
+        type=DecisionType.SOFTWARE_STACK,
         status=DecisionStatus.DRAFT,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),

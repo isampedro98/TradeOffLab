@@ -55,7 +55,7 @@ This backlog is intentionally biased toward the core MVP. It avoids speculative 
 
 - Create a decision from a question and context
 - Persist and reload a created decision through the workspace UI
-- Seed the ERP bootstrap example through the workspace UI
+- Keep bootstrap examples available through API fixtures, not pinned in the primary workspace UI
 - Edit a stored decision record
 - Add and edit options manually
 - Add and edit weighted criteria manually

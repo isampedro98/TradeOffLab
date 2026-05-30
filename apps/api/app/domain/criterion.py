@@ -46,23 +46,11 @@ def build_bootstrap_criteria(decision_id: str) -> list[Criterion]:
     now = datetime.now(UTC)
     return [
         Criterion(
-            id=f"{decision_id}-criterion-total-cost",
+            id=f"{decision_id}-criterion-operational-fit",
             decision_id=decision_id,
-            name="Total Cost of Ownership",
+            name="Operational Fit",
             description=(
-                "Evaluate licensing, implementation, customization, training, and support costs."
-            ),
-            weight=0.30,
-            measurement_type=CriterionMeasurementType.NUMERIC,
-            created_at=now,
-            updated_at=now,
-        ),
-        Criterion(
-            id=f"{decision_id}-criterion-functional-fit",
-            decision_id=decision_id,
-            name="Functional Fit",
-            description=(
-                "Measure how well each ERP matches the required business and administrative workflows."
+                "Evaluate backup strategy, replication, monitoring, migration tooling, and day-two operations."
             ),
             weight=0.30,
             measurement_type=CriterionMeasurementType.QUALITATIVE,
@@ -70,11 +58,11 @@ def build_bootstrap_criteria(decision_id: str) -> list[Criterion]:
             updated_at=now,
         ),
         Criterion(
-            id=f"{decision_id}-criterion-implementation-risk",
+            id=f"{decision_id}-criterion-ecosystem-fit",
             decision_id=decision_id,
-            name="Implementation Risk",
+            name="Ecosystem Fit",
             description=(
-                "Assess migration complexity, rollout risk, dependency on custom work, and project uncertainty."
+                "Measure ORM support, hosting compatibility, extension availability, and integration fit with the current stack."
             ),
             weight=0.25,
             measurement_type=CriterionMeasurementType.QUALITATIVE,
@@ -82,13 +70,25 @@ def build_bootstrap_criteria(decision_id: str) -> list[Criterion]:
             updated_at=now,
         ),
         Criterion(
-            id=f"{decision_id}-criterion-local-support",
+            id=f"{decision_id}-criterion-total-cost",
             decision_id=decision_id,
-            name="Local Support Availability",
+            name="Total Cost of Ownership",
             description=(
-                "Evaluate availability of local implementation partners, support quality, and market familiarity."
+                "Assess licensing, support, infrastructure, migration, and ongoing administration cost."
             ),
-            weight=0.15,
+            weight=0.25,
+            measurement_type=CriterionMeasurementType.NUMERIC,
+            created_at=now,
+            updated_at=now,
+        ),
+        Criterion(
+            id=f"{decision_id}-criterion-team-familiarity",
+            decision_id=decision_id,
+            name="Team Familiarity",
+            description=(
+                "Evaluate how much internal knowledge already exists for administration, tuning, and troubleshooting."
+            ),
+            weight=0.20,
             measurement_type=CriterionMeasurementType.QUALITATIVE,
             created_at=now,
             updated_at=now,

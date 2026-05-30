@@ -1,0 +1,7 @@
+{
+  "title": "PostgreSQL vs MySQL vs SQL Server",
+  "question": "Which primary OLTP database should we standardize on for the next product phase?",
+  "context": "We need a structured evaluation of relational database alternatives for a transactional product stack with operational, ecosystem, licensing, and maintainability tradeoffs.",
+  "type": "software_stack",
+  "seed_options": ["PostgreSQL", "MySQL", "SQL Server"]
+}
