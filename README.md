@@ -62,7 +62,7 @@ The architecture prioritizes:
 The initial MVP must support:
 
 1. Create a decision
-2. Generate a structured decision frame
+2. Capture a structured decision frame (title, brief, question, context — manual today; no dedicated frame generator yet)
 3. Define and edit options
 4. Define and edit weighted criteria
 5. Generate assumptions
@@ -105,6 +105,7 @@ Example fields:
 Decision
 - id
 - title
+- decision_brief
 - question
 - context
 - type
@@ -138,20 +139,20 @@ RecommendationMemo
 
 TradeOffLab should use deterministic AI pipelines with structured outputs, not autonomous agents.
 
-Example orchestration:
+Target orchestration (steps are independent endpoints today; no single `runDecisionAnalysis()` yet):
 
 ```text
-runDecisionAnalysis()
-|- generateDecisionFrame()
-|- generateCriteria()
-|- generateOptions()
-|- generateAssumptions()
-|- generateTradeoffMatrix()
-|- generateAdversarialReview()
-'- generateRecommendationMemo()
+runDecisionAnalysis()            # not implemented as one call yet
+|- captureDecisionFrame()        # manual CRUD today
+|- defineOptions()               # manual CRUD today
+|- defineCriteria()              # manual CRUD today
+|- generateAssumptions()          # implemented
+|- generateTradeoffMatrix()      # implemented
+|- generateAdversarialReview()   # implemented
+'- generateRecommendationMemo()  # implemented
 ```
 
-Each step must:
+Each generation step must:
 
 - receive structured inputs
 - produce structured outputs
@@ -208,12 +209,12 @@ Gemini Flash is the default MVP provider because it offers:
 - low latency
 - a practical free-tier starting point
 
-Reliability requirements:
+Reliability requirements (partially implemented):
 
-- schema-driven prompting
-- JSON-mode or equivalent structured generation
-- validation after every generation
-- retry or repair flow on validation failure
+- schema-driven prompting — done
+- JSON-mode or equivalent structured generation — done
+- validation after every generation — done
+- retry or repair flow on validation failure — not implemented yet
 
 Reference material:
 
@@ -275,10 +276,10 @@ The first implementation cycle should deliver:
 4. FastAPI backend
 5. LiteLLM integration
 6. Gemini Flash default provider configuration
-7. Shared schemas package
-8. `Decision` entity and persistence
-9. Structured AI generation pipeline
-10. One end-to-end example: `ERPNext vs Tango vs Bejerman`
+7. Shared schemas package — reserved, not populated
+8. `Decision` entity and persistence — done
+9. Structured AI generation pipeline — done for assumptions through recommendation memo
+10. One end-to-end example — bootstrap seed uses `PostgreSQL vs MySQL vs SQL Server`; `examples/erp-adoption` is a separate fixture
 
 ## Local-First Setup Goal
 
@@ -375,7 +376,7 @@ Still open for Phase 1 completion:
 - shared `packages/schemas` (types are duplicated between API and web today)
 - generation provenance and `DecisionTrace`
 - retry/repair on model validation failure
-- automated tests and CI
+- CI and broader test coverage (LiteLLM contract tests exist under `apps/api/tests/`; CRUD/export tests still pending)
 - right-side trace panel described in UI direction below
 
 ## Current Status
