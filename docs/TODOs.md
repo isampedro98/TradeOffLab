@@ -2,103 +2,89 @@
 
 This backlog is intentionally biased toward the core MVP. It avoids speculative platform work and anything that pushes the project toward chatbot or agent-platform behavior.
 
+For an implementation snapshot as of 2026-05-30, see `docs/AUDIT.md`.
+
 ## Highest Priority
 
-- Add Alembic revisions as new persisted entities are introduced
-- Define shared schemas package for decision-domain models
-- Expose richer decision-detail endpoints once related entities exist
-- Implement `TradeoffMatrix`
-- Implement `AdversarialReview`
-- Implement `RecommendationMemo`
-- Export dossier as Markdown and JSON
+- Add pytest (or equivalent) for decision CRUD, export shape, and generation services with mocked LiteLLM
+- Add minimal CI (API lint/test, web lint)
+- Populate `packages/schemas` from Pydantic models; align `apps/web` types with generated contracts
+- Persist generation provenance (model, provider, prompt id/version, timestamp) on AI-produced artifacts
+- Implement `DecisionTrace` (or equivalent) so exports explain how recommendations were produced
+- Add retry/repair when structured model output fails validation
+
+## Phase 1 Remaining (MVP polish)
+
+- Dedicated “decision frame” generator (today: manual decision fields only)
+- Right-side trace panel (warnings, provenance, assumption highlights)
+- Wire `examples/*` fixtures into seed or import flows beyond the ERP bootstrap
+- Move inline prompts into `packages/prompts` with version identifiers
+- Integrate shadcn/ui **or** remove it from stack docs if custom Tailwind remains the direction
 
 ## Completed Recently
 
+- Persist `Option`, `Criterion`, `Assumption`, `Evidence`
+- Persist `TradeoffMatrix`, `AdversarialReview`, `RecommendationMemo`
+- Structured AI generation for assumptions, tradeoffs, adversarial review, recommendation memo
+- Markdown and JSON dossier export
+- Workspace sections for full MVP navigation flow
 - Scaffold monorepo folders: `apps`, `packages`, `examples`, `docs`, `docker`, `.devcontainer`
 - Create `docker-compose.yml` for `web`, `api`, `postgres`, and `litellm`
 - Create `.env.example` with local configuration for Postgres, LiteLLM, and Gemini
-- Bootstrap `apps/web` with Next.js, TypeScript, Tailwind, and shadcn/ui
-- Bootstrap `apps/api` with FastAPI, Pydantic, and a clear domain-first module layout
-- Define the first persistence strategy for the MVP
+- Bootstrap `apps/web` with Next.js, TypeScript, and Tailwind
+- Bootstrap `apps/api` with FastAPI, Pydantic, and domain-first module layout
 - Persist `Decision` records in Postgres
 - Wire the frontend workspace to persisted `Decision` CRUD
-- Add Alembic and an initial migration for the `decisions` table
-- Persist `Option`
-- Persist `Criterion`
-- Persist `Assumption`
-- Generate assumptions through LiteLLM with structured outputs
+- Add Alembic and migrations through recommendation memo tables
+- LiteLLM client with strict JSON-schema validation
 
-## Core Domain
+## Core Domain (not done)
 
-- Model `Decision`
-- Model `Option`
-- Model `Criterion`
-- Model `Assumption`
-- Model `Evidence`
 - Model `Claim`
-- Model `TradeoffMatrix`
-- Model `AdversarialReview`
-- Model `RecommendationMemo`
 - Model `DecisionTrace`
 
-## AI Pipeline
+## AI Pipeline (not done)
 
-- Define schema-first prompt templates for each analysis step
-- Implement LiteLLM integration behind a provider-agnostic service boundary
-- Configure Gemini Flash as default provider
-- Implement JSON-structured generation with schema validation
-- Add retry and repair behavior when model outputs fail validation
+- Retry and repair behavior when model outputs fail validation
 - Persist every generated artifact with provenance metadata
-- Support re-running one pipeline step without re-running the full analysis
+- Single orchestrated `runDecisionAnalysis()` entry (optional; steps work independently today)
+- Prompt templates versioned outside service modules
 
-## MVP User Flows
+## MVP User Flows (mostly done)
 
 - Create a decision from a question and context
 - Persist and reload a created decision through the workspace UI
-- Keep bootstrap examples available through API fixtures, not pinned in the primary workspace UI
 - Edit a stored decision record
-- Add and edit options manually
-- Add and edit weighted criteria manually
-- Generate assumptions
-- Generate tradeoff analysis
-- Generate adversarial review
-- Generate recommendation memo
-- Export full dossier as Markdown
-- Export full dossier as JSON
+- Add and edit options, criteria, assumptions, and evidence manually
+- Generate assumptions, tradeoff analysis, adversarial review, recommendation memo
+- Export full dossier as Markdown and JSON
 
-## UI Workspace
+## UI Workspace (partial)
 
-- Create left navigation for decision sections
-- Create central structured editing workspace
-- Create right-side traceability panel
-- Show AI-generated warnings and validation issues clearly
-- Make assumptions and evidence visible without hiding them in secondary screens
-- Avoid chat-first interaction patterns in navigation and layout
+- Left navigation and central structured editing workspace — done
+- Right-side traceability panel — not done
+- Show AI-generated warnings and validation issues clearly — partial (per-section error states)
 
-## Persistence And Traceability
+## Persistence And Traceability (not done)
 
-- Store options locally in Postgres
-- Store criteria locally in Postgres
 - Track generation metadata by pipeline step
 - Track prompt version or prompt identifier
-- Track model, provider, and timestamp for each generation
+- Track model, provider, and timestamp for each generation on stored rows
 - Preserve manual edits separately from generated content where useful
 - Design `DecisionTrace` so exports can explain how a recommendation was produced
 
 ## Examples
 
-- Create example dossier: `ERPNext vs Tango vs Bejerman`
-- Create example dossier: `AWS vs GCP vs Azure`
-- Create example dossier: `Build vs Buy for procurement automation`
+- `examples/erp-adoption` — JSON input + README
+- `examples/database-platform-choice` — JSON input + README
+- Full example dossiers as importable seeds (beyond ERP bootstrap) — pending
 
 ## Quality
 
-- Add API tests for `Decision` CRUD and migration bootstrapping
+- Add API tests for CRUD, migrations, and generation contracts
 - Add backend schema validation tests
-- Add pipeline contract tests for structured outputs
 - Add example snapshot tests for exported dossiers
-- Add local developer setup instructions that work from scratch
-- Add architecture docs describing module boundaries and invariants
+- Add architecture docs — see `docs/ARCHITECTURE.md`
 
 ## Explicitly Deferred
 
@@ -108,7 +94,7 @@ This backlog is intentionally biased toward the core MVP. It avoids speculative 
 - Payments
 - Vector databases
 - RAG pipelines
-- autonomous agents
+- Autonomous agents
 - Kubernetes
 - SaaS-grade tenancy features
 
@@ -116,6 +102,5 @@ This backlog is intentionally biased toward the core MVP. It avoids speculative 
 
 - Deep UI polish beyond obvious workflow friction
 - Chat-style interactions layered over the workspace
-- Broad refactors before the MVP decision flow is complete
-- Heavy CRUD expansion for non-core entities before synthesis is working
 - Advanced search, RAG, or retrieval layers
+- Host-native dev workflow alongside Docker Compose

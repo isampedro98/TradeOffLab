@@ -277,3 +277,10 @@ We should revisit a development decision when:
 - the product scope changes enough that the original reasoning no longer applies
 
 Until then, consistency is more valuable than churn.
+
+## Documentation Map
+
+- `docs/ARCHITECTURE.md` — module boundaries and invariants
+- `docs/AUDIT.md` — implementation snapshot and gaps (refresh when major features land)
+- `docs/ROADMAP.md` — phase sequencing
+- `docs/TODOs.md` — actionable backlog

@@ -45,9 +45,9 @@ Exit criteria:
 
 Current status:
 
-- In progress
-- `Decision` persistence, Alembic migrations, and a wired workspace shell are done
-- `Option`, `Criterion`, and generation flows are still pending
+- In progress — core workflow is runnable locally
+- Done: `Decision` through `RecommendationMemo` persistence, workspace sections, structured generation steps, Markdown/JSON export
+- Remaining for Phase 1 exit: shared schemas package, provenance/`DecisionTrace`, tests, trace panel, example dossier imports
 
 ## Phase 2: Traceability Hardening
 

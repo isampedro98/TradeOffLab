@@ -167,8 +167,7 @@ Frontend:
 
 - Next.js
 - TypeScript
-- Tailwind
-- shadcn/ui
+- Tailwind (custom workspace components; shadcn/ui is planned, not wired yet)
 
 Backend:
 
@@ -235,8 +234,7 @@ tradeofflab/
 |  '- ui/
 |- examples/
 |  |- erp-adoption/
-|  |- cloud-provider-choice/
-|  '- build-vs-buy/
+|  '- database-platform-choice/
 |- docs/
 |- docker/
 |- .devcontainer/
@@ -294,19 +292,17 @@ docker compose up
 
 A new contributor should be able to run the project locally without cloud infrastructure or platform-specific orchestration.
 
-## Current Bootstrap Structure
+## Repository Layout
 
-The repository now includes a first runnable scaffold:
+The repository includes a runnable local MVP:
 
-- `apps/web`: Next.js workspace wired to persisted decisions through the API
-- `apps/api`: FastAPI service with persisted `Decision` CRUD and bootstrap seeding
-- `packages/*`: reserved package boundaries for schemas, prompts, core logic, and shared UI
-- `examples/erp-adoption`: first example input for the MVP dossier flow
-- `docker-compose.yml`: local `web` + `api` + `postgres` + `litellm` runtime using the stable official LiteLLM image
-- `docker-compose.lite.yml`: optional lightweight override for local development
-- `docker/litellm/config.yaml`: local LiteLLM proxy model mapping
-- `docker/litellm/Dockerfile`: local slim LiteLLM image build
-- `apps/api/alembic/*`: database migration setup with an initial `decisions` revision
+- `apps/web`: Next.js decision workspace (sections, CRUD, generation triggers, export)
+- `apps/api`: FastAPI service with normalized persistence and LiteLLM-backed generation
+- `packages/*`: reserved boundaries for schemas, prompts, core logic, and shared UI (placeholders today)
+- `examples/`: JSON fixtures and README per decision scenario
+- `docker-compose.yml`: local `web` + `api` + `postgres` + `litellm`
+- `docker-compose.lite.yml`: optional lightweight LiteLLM image override
+- `apps/api/alembic/`: schema migrations (run automatically on API startup)
 - `.env.example`: baseline environment variables
 
 ## Getting Started
@@ -335,11 +331,17 @@ LiteLLM image with a local slim build.
 
 Useful API paths in the current build:
 
-- `GET /api/v1/decisions`
-- `POST /api/v1/decisions`
-- `GET /api/v1/decisions/{decision_id}`
-- `PATCH /api/v1/decisions/{decision_id}`
+- `GET /api/v1/health`
+- `GET|POST /api/v1/decisions`
+- `GET|PATCH|DELETE /api/v1/decisions/{decision_id}`
 - `POST /api/v1/decisions/seed/bootstrap-example`
+- `GET /api/v1/decisions/{decision_id}/export/json`
+- `GET /api/v1/decisions/{decision_id}/export/markdown`
+- Nested CRUD: `.../options`, `.../criteria`, `.../assumptions`, `.../evidence`
+- Generation: `POST .../assumptions/generate`, `.../tradeoff-matrix/generate`, `.../adversarial-review/generate`, `.../recommendation-memo/generate`
+- Artifacts: `GET .../tradeoff-matrix`, `.../adversarial-review`, `.../recommendation-memo`
+
+See `docs/ARCHITECTURE.md` and `docs/AUDIT.md` for module boundaries and gap analysis.
 
 Variables that matter for the current local stack:
 
@@ -350,26 +352,30 @@ Variables that matter for the current local stack:
 - `LITELLM_API_KEY`: the credential the backend will use when calling LiteLLM
 - `GEMINI_API_KEY`: the upstream provider key LiteLLM uses to reach Gemini
 
-Current status of the scaffold:
+Current implementation status:
 
-- the frontend is a workspace-oriented shell connected to real persisted decision records
-- the backend exposes persisted `Decision` CRUD and an idempotent bootstrap seed route
-- Postgres persistence is wired for `Decision`
-- Alembic migrations are wired and executed on API container startup
-- LiteLLM is wired as a local proxy service
-- structured AI generation pipelines are still pending
+- Workspace UI covers Overview, Options, Criteria, Assumptions, Evidence, Tradeoffs, Adversarial Review, Recommendation, and Export
+- Postgres persistence for all core MVP entities except `Claim` and `DecisionTrace`
+- Schema-validated AI generation for assumptions, tradeoff matrix, adversarial review, and recommendation memo
+- Markdown and JSON dossier export
+- LiteLLM proxy with Gemini as the default upstream provider
+
+Still open for Phase 1 completion:
+
+- shared `packages/schemas` (types are duplicated between API and web today)
+- generation provenance and `DecisionTrace`
+- retry/repair on model validation failure
+- automated tests and CI
+- right-side trace panel described in UI direction below
 
 ## Current Status
 
-This repository is in the bootstrap phase. The current priorities are:
-
-- extend persistence beyond `Decision` into `Option` and `Criterion`
-- define the analysis application/service layer
-- implement the schema-validated AI pipeline
-- build the first end-to-end decision workflow
+Phase 1 (core decision workspace MVP) is in progress and largely functional locally. The main remaining work is traceability hardening, shared contracts, and quality gates—not greenfield CRUD.
 
 See:
 
+- `docs/AUDIT.md` — repository audit and MVP checklist
+- `docs/ARCHITECTURE.md` — module boundaries
 - `docs/CHANGELOG.md`
 - `docs/DEVELOPMENT_DECISIONS.md`
 - `docs/TODOs.md`

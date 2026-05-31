@@ -10,3 +10,5 @@ Initial direction:
 
 The purpose of this package is to prevent schema logic from being buried inside either the API or the web app.
 
+**Status:** Not populated yet. Contracts currently live in `apps/api/app/domain/` and `apps/web/components/decision-shell/model.ts`. See `docs/ARCHITECTURE.md` and `docs/AUDIT.md`.
+
