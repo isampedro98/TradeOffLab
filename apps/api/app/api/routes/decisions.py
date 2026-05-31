@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db_session
@@ -37,6 +38,7 @@ from app.services.adversarial_review_generation import (
     AdversarialReviewGenerationService,
 )
 from app.services.litellm_client import LiteLLMError
+from app.services.decision_export import DecisionDossierExport, DecisionExportService
 from app.services.recommendation_memo_generation import (
     RecommendationMemoGenerationRequest,
     RecommendationMemoGenerationResponse,
@@ -83,6 +85,44 @@ def get_decision(
     session: Session = Depends(get_db_session),
 ) -> Decision:
     return require_decision(session, decision_id)
+
+
+@router.get("/{decision_id}/export/json", response_model=DecisionDossierExport)
+def export_decision_json(
+    decision_id: str,
+    session: Session = Depends(get_db_session),
+) -> DecisionDossierExport:
+    service = DecisionExportService(session)
+    try:
+        return service.build_dossier(decision_id)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error),
+        ) from error
+
+
+@router.get("/{decision_id}/export/markdown", response_class=PlainTextResponse)
+def export_decision_markdown(
+    decision_id: str,
+    session: Session = Depends(get_db_session),
+) -> Response:
+    service = DecisionExportService(session)
+    try:
+        markdown = service.build_markdown(decision_id)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error),
+        ) from error
+
+    filename = f"{decision_id}.md"
+    return PlainTextResponse(
+        content=markdown,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
 
 
 @router.patch("/{decision_id}", response_model=Decision)

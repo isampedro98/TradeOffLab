@@ -12,6 +12,8 @@ export const sections = [
   "Export",
 ] as const;
 
+export type WorkspaceSection = (typeof sections)[number];
+
 export const decisionTypes = [
   { value: "erp_adoption", label: "ERP Adoption" },
   { value: "architecture", label: "Architecture" },
@@ -151,6 +153,22 @@ export type RecommendationMemo = {
   conditions: RecommendationCondition[];
 };
 
+export type DecisionDossierExport = {
+  decision: Decision;
+  options: OptionRecord[];
+  criteria: CriterionRecord[];
+  assumptions: Assumption[];
+  evidence: {
+    id: string;
+    title: string;
+    summary: string;
+    source: string;
+  }[];
+  tradeoff_matrix: TradeoffMatrix | null;
+  adversarial_review: AdversarialReview | null;
+  recommendation_memo: RecommendationMemo | null;
+};
+
 export type CreateDecisionPayload = {
   title: string;
   decision_brief: string;
@@ -256,6 +274,7 @@ export type DecisionWorkspaceController = {
   tradeoffMatrix: TradeoffMatrix | null;
   adversarialReview: AdversarialReview | null;
   recommendationMemo: RecommendationMemo | null;
+  activeSection: WorkspaceSection;
   activeDecisionId: string | null;
   activeDecision: Decision | null;
   optionMap: Map<string, OptionRecord>;
@@ -277,6 +296,8 @@ export type DecisionWorkspaceController = {
   isGeneratingTradeoffMatrix: boolean;
   isGeneratingAdversarialReview: boolean;
   isGeneratingRecommendationMemo: boolean;
+  isExportingJson: boolean;
+  isExportingMarkdown: boolean;
   decisionErrorMessage: string | null;
   optionErrorMessage: string | null;
   criterionErrorMessage: string | null;
@@ -284,10 +305,12 @@ export type DecisionWorkspaceController = {
   tradeoffMatrixErrorMessage: string | null;
   adversarialReviewErrorMessage: string | null;
   recommendationMemoErrorMessage: string | null;
+  exportErrorMessage: string | null;
   assumptionSuccessMessage: string | null;
   tradeoffMatrixSuccessMessage: string | null;
   adversarialReviewSuccessMessage: string | null;
   recommendationMemoSuccessMessage: string | null;
+  exportSuccessMessage: string | null;
   canGenerateAssumptions: boolean;
   canRegenerateSelectedAssumptions: boolean;
   canGenerateTradeoffMatrix: boolean;
@@ -296,6 +319,7 @@ export type DecisionWorkspaceController = {
   showDecisionBrief: boolean;
   showDecisionQuestion: boolean;
   setActiveDecisionId: Dispatch<SetStateAction<string | null>>;
+  setActiveSection: Dispatch<SetStateAction<WorkspaceSection>>;
   setDecisionDraft: Dispatch<SetStateAction<CreateDecisionPayload>>;
   setOptionDraft: Dispatch<SetStateAction<CreateOptionPayload>>;
   setCriterionDraft: Dispatch<SetStateAction<CreateCriterionPayload>>;
@@ -314,4 +338,6 @@ export type DecisionWorkspaceController = {
   generateTradeoffMatrix: () => Promise<void>;
   generateAdversarialReview: () => Promise<void>;
   generateRecommendationMemo: () => Promise<void>;
+  exportJson: () => Promise<void>;
+  exportMarkdown: () => Promise<void>;
 };

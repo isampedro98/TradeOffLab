@@ -17,16 +17,24 @@ export function WorkspaceSidebar({ controller }: Props) {
       </div>
 
       <nav className="space-y-2">
-        {sections.map((section, index) => (
-          <div
+        {sections.map((section) => {
+          const isActive = controller.activeSection === section;
+
+          return (
+            <button
             key={section}
-            className={`rounded-2xl px-4 py-3 text-sm ${
-              index === 0 ? "bg-ink text-paper" : "bg-black/[0.03] text-ink/80"
+            type="button"
+            onClick={() => controller.setActiveSection(section)}
+            className={`w-full rounded-2xl px-4 py-3 text-left text-sm transition ${
+              isActive
+                ? "bg-ink text-paper"
+                : "bg-black/[0.03] text-ink/80 hover:bg-black/[0.05]"
             }`}
           >
             {section}
-          </div>
-        ))}
+            </button>
+          );
+        })}
       </nav>
 
       <div className="mt-6 border-t border-black/10 pt-5">

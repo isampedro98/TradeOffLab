@@ -3,8 +3,10 @@
 import { AdversarialReviewSection } from "./decision-shell/AdversarialReviewSection";
 import { AssumptionsSection } from "./decision-shell/AssumptionsSection";
 import { CriteriaSection } from "./decision-shell/CriteriaSection";
+import { ExportSection } from "./decision-shell/ExportSection";
 import { NewDecisionModal } from "./decision-shell/NewDecisionModal";
 import { OptionsSection } from "./decision-shell/OptionsSection";
+import { PlaceholderSection } from "./decision-shell/PlaceholderSection";
 import { RecommendationSection } from "./decision-shell/RecommendationSection";
 import { TradeoffsSection } from "./decision-shell/TradeoffsSection";
 import { useDecisionWorkspace } from "./decision-shell/useDecisionWorkspace";
@@ -22,17 +24,7 @@ export function DecisionShell() {
 
           <section className="rounded-[32px] border border-black/10 bg-white/75 p-6 shadow-panel backdrop-blur">
             <div className="flex flex-col gap-6">
-              <WorkspaceOverview controller={controller} />
-
-              <div className="grid gap-4 xl:grid-cols-2">
-                <OptionsSection controller={controller} />
-                <CriteriaSection controller={controller} />
-              </div>
-
-              <AssumptionsSection controller={controller} />
-              <TradeoffsSection controller={controller} />
-              <AdversarialReviewSection controller={controller} />
-              <RecommendationSection controller={controller} />
+              <ActiveSection controller={controller} />
             </div>
           </section>
         </div>
@@ -41,4 +33,29 @@ export function DecisionShell() {
       <NewDecisionModal controller={controller} />
     </>
   );
+}
+
+function ActiveSection({ controller }: { controller: ReturnType<typeof useDecisionWorkspace> }) {
+  switch (controller.activeSection) {
+    case "Overview":
+      return <WorkspaceOverview controller={controller} />;
+    case "Options":
+      return <OptionsSection controller={controller} />;
+    case "Criteria":
+      return <CriteriaSection controller={controller} />;
+    case "Assumptions":
+      return <AssumptionsSection controller={controller} />;
+    case "Tradeoffs":
+      return <TradeoffsSection controller={controller} />;
+    case "Adversarial Review":
+      return <AdversarialReviewSection controller={controller} />;
+    case "Recommendation":
+      return <RecommendationSection controller={controller} />;
+    case "Export":
+      return <ExportSection controller={controller} />;
+    case "Evidence":
+      return <PlaceholderSection controller={controller} section={controller.activeSection} />;
+    default:
+      return <WorkspaceOverview controller={controller} />;
+  }
 }

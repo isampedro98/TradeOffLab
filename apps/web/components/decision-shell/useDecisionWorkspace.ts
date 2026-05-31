@@ -19,6 +19,7 @@ import {
   type OptionRecord,
   type RecommendationMemo,
   type TradeoffMatrix,
+  type WorkspaceSection,
 } from "./model";
 
 export function useDecisionWorkspace(): DecisionWorkspaceController {
@@ -36,6 +37,8 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     useState<AdversarialReview | null>(null);
   const [recommendationMemo, setRecommendationMemo] =
     useState<RecommendationMemo | null>(null);
+  const [activeSection, setActiveSection] =
+    useState<WorkspaceSection>("Overview");
   const [activeDecisionId, setActiveDecisionId] = useState<string | null>(null);
   const [decisionDraft, setDecisionDraft] =
     useState<CreateDecisionPayload>(initialDecisionDraft);
@@ -63,6 +66,8 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     useState(false);
   const [isGeneratingRecommendationMemo, setIsGeneratingRecommendationMemo] =
     useState(false);
+  const [isExportingJson, setIsExportingJson] = useState(false);
+  const [isExportingMarkdown, setIsExportingMarkdown] = useState(false);
   const [decisionErrorMessage, setDecisionErrorMessage] = useState<string | null>(
     null,
   );
@@ -82,6 +87,9 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     useState<string | null>(null);
   const [recommendationMemoErrorMessage, setRecommendationMemoErrorMessage] =
     useState<string | null>(null);
+  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
+    null,
+  );
   const [assumptionSuccessMessage, setAssumptionSuccessMessage] = useState<
     string | null
   >(null);
@@ -91,6 +99,9 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     useState<string | null>(null);
   const [recommendationMemoSuccessMessage, setRecommendationMemoSuccessMessage] =
     useState<string | null>(null);
+  const [exportSuccessMessage, setExportSuccessMessage] = useState<string | null>(
+    null,
+  );
 
   const activeDecision =
     decisions.find((decision) => decision.id === activeDecisionId) ?? null;
@@ -190,6 +201,8 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
       setTradeoffMatrixErrorMessage(null);
       setAdversarialReviewErrorMessage(null);
       setRecommendationMemoErrorMessage(null);
+      setExportErrorMessage(null);
+      setExportSuccessMessage(null);
       return;
     }
 
@@ -870,6 +883,78 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     }
   }
 
+  async function exportJson() {
+    if (!activeDecisionId || !activeDecision) {
+      return;
+    }
+
+    setIsExportingJson(true);
+    setExportErrorMessage(null);
+    setExportSuccessMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/export/json`),
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to export JSON (${response.status})`);
+      }
+
+      const payload = await response.json();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      });
+      downloadBlob(blob, `${activeDecision.id}.json`);
+      setExportSuccessMessage("Exported decision dossier as JSON.");
+    } catch (error) {
+      setExportErrorMessage(
+        error instanceof Error ? error.message : "Failed to export JSON.",
+      );
+    } finally {
+      setIsExportingJson(false);
+    }
+  }
+
+  async function exportMarkdown() {
+    if (!activeDecisionId || !activeDecision) {
+      return;
+    }
+
+    setIsExportingMarkdown(true);
+    setExportErrorMessage(null);
+    setExportSuccessMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/export/markdown`),
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to export Markdown (${response.status})`);
+      }
+
+      const content = await response.text();
+      const blob = new Blob([content], {
+        type: "text/markdown;charset=utf-8",
+      });
+      downloadBlob(blob, `${activeDecision.id}.md`);
+      setExportSuccessMessage("Exported decision dossier as Markdown.");
+    } catch (error) {
+      setExportErrorMessage(
+        error instanceof Error ? error.message : "Failed to export Markdown.",
+      );
+    } finally {
+      setIsExportingMarkdown(false);
+    }
+  }
+
   return {
     decisions,
     options,
@@ -879,6 +964,7 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     tradeoffMatrix,
     adversarialReview,
     recommendationMemo,
+    activeSection,
     activeDecisionId,
     activeDecision,
     optionMap,
@@ -900,6 +986,8 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     isGeneratingTradeoffMatrix,
     isGeneratingAdversarialReview,
     isGeneratingRecommendationMemo,
+    isExportingJson,
+    isExportingMarkdown,
     decisionErrorMessage,
     optionErrorMessage,
     criterionErrorMessage,
@@ -907,10 +995,12 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     tradeoffMatrixErrorMessage,
     adversarialReviewErrorMessage,
     recommendationMemoErrorMessage,
+    exportErrorMessage,
     assumptionSuccessMessage,
     tradeoffMatrixSuccessMessage,
     adversarialReviewSuccessMessage,
     recommendationMemoSuccessMessage,
+    exportSuccessMessage,
     canGenerateAssumptions,
     canRegenerateSelectedAssumptions,
     canGenerateTradeoffMatrix,
@@ -919,6 +1009,7 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     showDecisionBrief,
     showDecisionQuestion,
     setActiveDecisionId,
+    setActiveSection,
     setDecisionDraft,
     setOptionDraft,
     setCriterionDraft,
@@ -937,5 +1028,16 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     generateTradeoffMatrix,
     generateAdversarialReview,
     generateRecommendationMemo,
+    exportJson,
+    exportMarkdown,
   };
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.URL.revokeObjectURL(url);
 }
