@@ -1,7 +1,7 @@
 {
   "title": "ERPNext vs Tango vs Bejerman",
+  "decision_brief": "Evaluate ERP alternatives for a local implementation with cost, flexibility, implementation risk, and support tradeoffs.",
   "question": "Should we adopt ERPNext instead of Tango or Bejerman?",
   "context": "We need a structured evaluation of ERP alternatives for a local implementation scenario with cost, flexibility, implementation risk, and support tradeoffs.",
-  "type": "erp_adoption",
   "seed_options": ["ERPNext", "Tango", "Bejerman"]
 }
