@@ -303,7 +303,9 @@ The repository now includes a first runnable scaffold:
 - `packages/*`: reserved package boundaries for schemas, prompts, core logic, and shared UI
 - `examples/erp-adoption`: first example input for the MVP dossier flow
 - `docker-compose.yml`: local `web` + `api` + `postgres` + `litellm` runtime
+- `docker-compose.lite.yml`: optional lightweight override for local development
 - `docker/litellm/config.yaml`: local LiteLLM proxy model mapping
+- `docker/litellm/Dockerfile`: local slim LiteLLM image build
 - `apps/api/alembic/*`: database migration setup with an initial `decisions` revision
 - `.env.example`: baseline environment variables
 
@@ -315,6 +317,15 @@ The repository now includes a first runnable scaffold:
 4. Open `http://localhost:3000`
 5. Check the API at `http://localhost:8000/api/v1/health`
 6. Check the LiteLLM proxy at `http://localhost:4000`
+
+For a lighter local stack, use the compose override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.lite.yml up --build
+```
+
+The lite override keeps the same topology but replaces the upstream LiteLLM
+image with a local slim build.
 
 Useful API paths in the current build:
 

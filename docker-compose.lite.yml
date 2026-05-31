@@ -1,0 +1,6 @@
+services:
+  litellm:
+    build:
+      context: .
+      dockerfile: docker/litellm/Dockerfile
+    image: tradeofflab-litellm-lite:latest
