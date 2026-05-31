@@ -34,6 +34,37 @@ The value proposition is simple:
 
 AI-assisted decision engineering with traceable and criticizable reasoning.
 
+## Example: Water renewability decision
+
+A real dossier produced in the workspace — not a chat summary. The question: *Can water be considered a renewable resource from the perspective of current civilization?*
+
+![Adversarial review in the TradeOffLab workspace](docs/assets/water-adversarial-review.png)
+
+The pipeline moves from explicit options and weighted criteria through assumptions, evidence, a scored tradeoff matrix, adversarial critique, and a conditional recommendation. Exports are Markdown and JSON.
+
+| Stage | What you get |
+|-------|----------------|
+| Frame | Question, context, success criteria |
+| Analysis | Options, weighted criteria, assumptions (confidence + impact-if-false), evidence |
+| Synthesis | Tradeoff matrix and recommendation memo with conditions |
+| Critique | Adversarial review with severity, consequences, and mitigation tests |
+
+One finding from the adversarial review (2-option iteration — the review pushed back on the frame itself):
+
+> **Binary options preclude nuanced conditional classification** (medium)  
+> The brief asks whether a binary classification is adequate, but the options are strictly yes/no. The analysis is forced into an oversimplified answer.  
+> *Mitigation:* add a third option such as “conditionally renewable under X, Y, Z.”
+
+After adding that third option, the dossier shifted to a **conditional** recommendation with lower overall risk. That iteration story is documented in the example folder.
+
+| | 2 options | 3 options (+ “it depends”) |
+|--|-----------|----------------------------|
+| Adversarial risk | High | Medium |
+| Recommendation | Not renewable | Conditionally renewable |
+| Key critique | Option set prevents the answer you want | Energy weighting still too low |
+
+**Full exports:** [`examples/water-renewability/dossier.md`](examples/water-renewability/dossier.md) · [`dossier.json`](examples/water-renewability/dossier.json) · [example README](examples/water-renewability/README.md)
+
 ## Core Principles
 
 Every important recommendation should be:
@@ -234,6 +265,7 @@ tradeofflab/
 |  |- core/
 |  '- ui/
 |- examples/
+|  |- water-renewability/
 |  |- erp-adoption/
 |  '- database-platform-choice/
 |- docs/
@@ -300,7 +332,8 @@ The repository includes a runnable local MVP:
 - `apps/web`: Next.js decision workspace (sections, CRUD, generation triggers, export)
 - `apps/api`: FastAPI service with normalized persistence and LiteLLM-backed generation
 - `packages/*`: reserved boundaries for schemas, prompts, core logic, and shared UI (placeholders today)
-- `examples/`: JSON fixtures and README per decision scenario
+- `examples/`: curated dossiers and JSON fixtures (see `examples/water-renewability/` for a full walkthrough)
+- `docs/assets/`: screenshots and other documentation media
 - `docker-compose.yml`: local `web` + `api` + `postgres` + `litellm`
 - `docker-compose.lite.yml`: optional lightweight LiteLLM image override
 - `apps/api/alembic/`: schema migrations (run automatically on API startup)

@@ -1,0 +1,380 @@
+{
+  "decision": {
+    "id": "decision-16c4b82b19304918946ef80d1679e892",
+    "title": "Water",
+    "decision_brief": "Evaluate whether water should be classified as a renewable resource when considering physical availability, technological capabilities, energy requirements, economic feasibility, infrastructure constraints, and long-term sustainability. The analysis aims to determine whether a binary classification is sufficient or whether renewability depends on scale, geography, and human intervention.",
+    "question": "Can water be considered a renewable resource from the perspective of current civilization?",
+    "context": "Water is commonly classified as a renewable resource due to the hydrological cycle. However, human access to freshwater depends on geographic distribution, infrastructure, energy consumption, treatment technologies, and economic constraints. This analysis seeks to evaluate whether the traditional classification remains valid when considering practical human use rather than purely planetary-scale physical processes.\n\nSuccess criteria:\nIdentify the strongest arguments for and against classifying water as renewable.\nQuantify major physical, technological, economic, and energy constraints.\nAssess the degree of scientific consensus.\nDetermine whether a binary classification is adequate or whether a conditional classification is more accurate.",
+    "type": "strategic_technical",
+    "status": "recommended",
+    "created_at": "2026-05-31T10:42:56.981036Z",
+    "updated_at": "2026-05-31T11:10:11.761126Z"
+  },
+  "options": [
+    {
+      "id": "option-7c6d994bedd64f04860cddf41ea832cb",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "name": "Water is a renewable resource",
+      "description": "The hydrological cycle continuously replenishes water.\nThe total amount of water on Earth remains essentially constant.\nTechnology enables treatment, recycling, and desalination.",
+      "created_at": "2026-05-31T10:43:47.190676Z",
+      "updated_at": "2026-05-31T10:43:47.190676Z"
+    },
+    {
+      "id": "option-05fd40d031144accaf27d34203493799",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "name": "Water is not a renewable resource",
+      "description": "Accessible freshwater is limited.\nAquifers can be depleted faster than they recharge.\nPollution can render portions of the resource unusable.\nThe energy required to recover all usable water may be prohibitively expensive.",
+      "created_at": "2026-05-31T10:44:14.374930Z",
+      "updated_at": "2026-05-31T10:44:14.374930Z"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "criterion-8770231ce04143bc976e1bbeebb458df",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "name": "Physical Consistency",
+      "description": "Which option is most consistent with the laws of physics and the natural water cycle?",
+      "weight": 0.1,
+      "measurement_type": "qualitative",
+      "created_at": "2026-05-31T10:45:41.556254Z",
+      "updated_at": "2026-05-31T10:45:41.556254Z"
+    },
+    {
+      "id": "criterion-a5c581a9353949239043d1a2a8f94500",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "name": "Accessibility",
+      "description": "Which option best reflects the amount of water that is actually available for consumption, agriculture, and industry?",
+      "weight": 0.2,
+      "measurement_type": "qualitative",
+      "created_at": "2026-05-31T10:46:20.901950Z",
+      "updated_at": "2026-05-31T10:46:20.901950Z"
+    },
+    {
+      "id": "criterion-929526dba7a4451e812473b64df1cf2d",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "name": "Energy Requirements",
+      "description": "How much energy is required to maintain the resource indefinitely?",
+      "weight": 0.05,
+      "measurement_type": "qualitative",
+      "created_at": "2026-05-31T10:46:59.187068Z",
+      "updated_at": "2026-05-31T10:46:59.187068Z"
+    },
+    {
+      "id": "criterion-f4da559bc8484e70bae659e9edc38938",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "name": "Economic Viability",
+      "description": "Which option best reflects the real-world costs of maintaining access to water?",
+      "weight": 0.15,
+      "measurement_type": "qualitative",
+      "created_at": "2026-05-31T10:47:18.707302Z",
+      "updated_at": "2026-05-31T10:47:18.707302Z"
+    },
+    {
+      "id": "criterion-f87e4b4ec9e34ace9eb0af85083efc77",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "name": "Technological Scalability",
+      "description": "Can current technology sustain this perspective for billions of people?",
+      "weight": 0.2,
+      "measurement_type": "qualitative",
+      "created_at": "2026-05-31T10:48:01.196291Z",
+      "updated_at": "2026-05-31T10:48:01.196291Z"
+    },
+    {
+      "id": "criterion-311ca207009049e4b8c823577bda8b04",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "name": "Long-Term Sustainability",
+      "description": "Which option remains valid over a 100-year or 500-year horizon?",
+      "weight": 0.3,
+      "measurement_type": "qualitative",
+      "created_at": "2026-05-31T10:49:32.201555Z",
+      "updated_at": "2026-05-31T10:49:32.201555Z"
+    }
+  ],
+  "assumptions": [
+    {
+      "id": "assumption-fc9005d9c1874190ba89438af776178e",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "statement": "Current and near-future water treatment and desalination technologies can be scaled globally to meet the freshwater demands of a growing population without significant technological breakthroughs.",
+      "confidence": "medium",
+      "impact_if_false": "If technology cannot scale, then water access will become a critical limiting factor, making it non-renewable from a practical human perspective, especially in arid regions.",
+      "validation_method": "Review global water demand projections against projected output capacities of existing and emerging technologies (desalination, advanced recycling) and their deployment rates.",
+      "created_at": "2026-05-31T10:49:54.796110Z",
+      "updated_at": "2026-05-31T10:49:54.796110Z"
+    },
+    {
+      "id": "assumption-b827394c4fab48d096709247d3fd40a2",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "statement": "The energy required for widespread water treatment, desalination, and distribution will remain economically viable and environmentally sustainable for the next 100 years.",
+      "confidence": "low",
+      "impact_if_false": "If energy costs become prohibitive or unsustainable, then the practical renewability of water is severely limited by economic and environmental factors, making it inaccessible for many.",
+      "validation_method": "Model future energy demand for water infrastructure against projected renewable energy supply and cost trends, considering carbon footprint targets.",
+      "created_at": "2026-05-31T10:49:54.796110Z",
+      "updated_at": "2026-05-31T10:49:54.796110Z"
+    },
+    {
+      "id": "assumption-757b133a9f0c4767a657d299e6987ec1",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "statement": "Global infrastructure for water capture, purification, and distribution can be developed and maintained at a pace and cost that keeps up with population growth and climate change impacts.",
+      "confidence": "medium",
+      "impact_if_false": "Inadequate infrastructure will lead to localized water scarcity and quality issues, regardless of physical availability, making water effectively non-renewable for affected populations.",
+      "validation_method": "Analyze historical rates of water infrastructure development and investment against projected needs and climate change impacts (e.g., sea-level rise affecting coastal aquifers, extreme weather damaging infrastructure).",
+      "created_at": "2026-05-31T10:49:54.796110Z",
+      "updated_at": "2026-05-31T10:49:54.796110Z"
+    },
+    {
+      "id": "assumption-d2c0e053ab7b4eba8c8c05face7397c4",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "statement": "Human activities will not pollute freshwater sources faster than current or future treatment technologies can remediate them, ensuring a consistent supply of usable water.",
+      "confidence": "medium",
+      "impact_if_false": "If pollution outpaces remediation, a significant portion of physically available water becomes unusable, effectively reducing the renewable supply and increasing treatment costs.",
+      "validation_method": "Review trends in global freshwater pollution levels and the efficacy/cost of emerging remediation technologies, comparing against projected industrial and agricultural waste generation.",
+      "created_at": "2026-05-31T10:49:54.796110Z",
+      "updated_at": "2026-05-31T10:49:54.796110Z"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence-629e725047be4519bcad84860299a8dc",
+      "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+      "title": "Established Facts",
+      "summary": "Water is continuously renewed through the hydrological cycle, but only a small fraction of Earth's total water is readily accessible freshwater. Human access to usable water depends on geographic distribution, infrastructure, treatment technologies, energy availability, and economic feasibility. While water is commonly classified as a renewable resource, practical availability may be constrained by factors that differ significantly across regions and timescales. These facts establish the basis for evaluating whether water should be considered universally renewable or conditionally renewable.",
+      "source": "United States Geological Survey (USGS) – The Water Cycle & Freshwater Availability",
+      "created_at": "2026-05-31T10:52:41.902586Z",
+      "updated_at": "2026-05-31T10:52:41.902586Z"
+    }
+  ],
+  "tradeoff_matrix": {
+    "id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+    "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+    "summary": "This matrix evaluates whether water is a renewable resource from a practical human civilization perspective, considering physical, technological, economic, and sustainability factors. It highlights the tension between the natural hydrological cycle and the challenges of human access and usability.",
+    "scoring_scale_label": "1 = Weakest fit, 5 = Strongest fit",
+    "provider": "litellm",
+    "model": "tradeofflab-default",
+    "created_at": "2026-05-31T11:07:50.610140Z",
+    "updated_at": "2026-05-31T11:07:50.610140Z",
+    "assessments": [
+      {
+        "id": "tradeoff-assessment-84ff975def714149a7011784c000063a",
+        "matrix_id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+        "criterion_id": "criterion-311ca207009049e4b8c823577bda8b04",
+        "option_id": "option-05fd40d031144accaf27d34203493799",
+        "score": 4,
+        "rationale": "This option reflects significant long-term challenges to water availability due to depletion, pollution, and high energy/economic costs of remediation.",
+        "created_at": "2026-05-31T11:07:50.610140Z",
+        "updated_at": "2026-05-31T11:07:50.610140Z"
+      },
+      {
+        "id": "tradeoff-assessment-ef459110fcec4d27b2228fe5f6ffdcdc",
+        "matrix_id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+        "criterion_id": "criterion-311ca207009049e4b8c823577bda8b04",
+        "option_id": "option-7c6d994bedd64f04860cddf41ea832cb",
+        "score": 3,
+        "rationale": "Long-term sustainability depends heavily on managing pollution, energy costs, and infrastructure development, which are not guaranteed (Assumptions 2, 3, 4).",
+        "created_at": "2026-05-31T11:07:50.610140Z",
+        "updated_at": "2026-05-31T11:07:50.610140Z"
+      },
+      {
+        "id": "tradeoff-assessment-0592ae8e2fe2482ebbd07e0bda000d83",
+        "matrix_id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+        "criterion_id": "criterion-8770231ce04143bc976e1bbeebb458df",
+        "option_id": "option-05fd40d031144accaf27d34203493799",
+        "score": 1,
+        "rationale": "This option contradicts the fundamental physical reality of the hydrological cycle, which continuously renews water on Earth.",
+        "created_at": "2026-05-31T11:07:50.610140Z",
+        "updated_at": "2026-05-31T11:07:50.610140Z"
+      },
+      {
+        "id": "tradeoff-assessment-4d2573c3a3b942a8926e9c1c70c81bea",
+        "matrix_id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+        "criterion_id": "criterion-8770231ce04143bc976e1bbeebb458df",
+        "option_id": "option-7c6d994bedd64f04860cddf41ea832cb",
+        "score": 5,
+        "rationale": "The hydrological cycle continuously replenishes water on a planetary scale, aligning with physical laws.",
+        "created_at": "2026-05-31T11:07:50.610140Z",
+        "updated_at": "2026-05-31T11:07:50.610140Z"
+      },
+      {
+        "id": "tradeoff-assessment-2f0a3189412d42c9866c338d0fdcaaf7",
+        "matrix_id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+        "criterion_id": "criterion-929526dba7a4451e812473b64df1cf2d",
+        "option_id": "option-05fd40d031144accaf27d34203493799",
+        "score": 5,
+        "rationale": "This option strongly aligns with the reality that significant energy is required to make water usable and accessible, highlighting it as a limiting factor.",
+        "created_at": "2026-05-31T11:07:50.610140Z",
+        "updated_at": "2026-05-31T11:07:50.610140Z"
+      },
+      {
+        "id": "tradeoff-assessment-b794901af64441e08bc808398a5d7a9b",
+        "matrix_id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+        "criterion_id": "criterion-929526dba7a4451e812473b64df1cf2d",
+        "option_id": "option-7c6d994bedd64f04860cddf41ea832cb",
+        "score": 2,
+        "rationale": "Maintaining access to usable water for billions requires substantial energy for treatment, pumping, and desalination.",
+        "created_at": "2026-05-31T11:07:50.610140Z",
+        "updated_at": "2026-05-31T11:07:50.610140Z"
+      },
+      {
+        "id": "tradeoff-assessment-839b953812a448a98f8e82ba68d610be",
+        "matrix_id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+        "criterion_id": "criterion-a5c581a9353949239043d1a2a8f94500",
+        "option_id": "option-05fd40d031144accaf27d34203493799",
+        "score": 5,
+        "rationale": "This option accurately reflects the practical limitations of accessible freshwater due to depletion, pollution, and distribution challenges.",
+        "created_at": "2026-05-31T11:07:50.610140Z",
+        "updated_at": "2026-05-31T11:07:50.610140Z"
+      },
+      {
+        "id": "tradeoff-assessment-7d9ad486ee434d1682d3c26e444a46b5",
+        "matrix_id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+        "criterion_id": "criterion-a5c581a9353949239043d1a2a8f94500",
+        "option_id": "option-7c6d994bedd64f04860cddf41ea832cb",
+        "score": 2,
+        "rationale": "While physically abundant, accessible freshwater is geographically limited and requires significant intervention for universal access.",
+        "created_at": "2026-05-31T11:07:50.610140Z",
+        "updated_at": "2026-05-31T11:07:50.610140Z"
+      },
+      {
+        "id": "tradeoff-assessment-81070cf94697406da25c26e4aa9b19f0",
+        "matrix_id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+        "criterion_id": "criterion-f4da559bc8484e70bae659e9edc38938",
+        "option_id": "option-05fd40d031144accaf27d34203493799",
+        "score": 5,
+        "rationale": "This option accurately captures the high real-world costs of maintaining access to usable water for large populations and in challenging environments.",
+        "created_at": "2026-05-31T11:07:50.610140Z",
+        "updated_at": "2026-05-31T11:07:50.610140Z"
+      },
+      {
+        "id": "tradeoff-assessment-3e5605f4f8ad48dd93ae0fe3126b477d",
+        "matrix_id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+        "criterion_id": "criterion-f4da559bc8484e70bae659e9edc38938",
+        "option_id": "option-7c6d994bedd64f04860cddf41ea832cb",
+        "score": 2,
+        "rationale": "The costs associated with widespread treatment, distribution, and desalination are high and can be prohibitive for many regions.",
+        "created_at": "2026-05-31T11:07:50.610140Z",
+        "updated_at": "2026-05-31T11:07:50.610140Z"
+      },
+      {
+        "id": "tradeoff-assessment-39165f09cbe04c138e49965c9ad98a12",
+        "matrix_id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+        "criterion_id": "criterion-f87e4b4ec9e34ace9eb0af85083efc77",
+        "option_id": "option-05fd40d031144accaf27d34203493799",
+        "score": 4,
+        "rationale": "This option implicitly acknowledges the challenges of scaling technology to meet global demand, suggesting practical limitations for billions.",
+        "created_at": "2026-05-31T11:07:50.610140Z",
+        "updated_at": "2026-05-31T11:07:50.610140Z"
+      },
+      {
+        "id": "tradeoff-assessment-62e8f880805c46bfbdaf5fadf5f95c91",
+        "matrix_id": "tradeoff-matrix-6cd16b55149d4d759b14e49a1c400f8d",
+        "criterion_id": "criterion-f87e4b4ec9e34ace9eb0af85083efc77",
+        "option_id": "option-7c6d994bedd64f04860cddf41ea832cb",
+        "score": 3,
+        "rationale": "Technologies exist, but scaling them globally for billions faces significant infrastructure and energy challenges (Assumption 1).",
+        "created_at": "2026-05-31T11:07:50.610140Z",
+        "updated_at": "2026-05-31T11:07:50.610140Z"
+      }
+    ]
+  },
+  "adversarial_review": {
+    "id": "adversarial-review-eaafa1ffa52d438f8e17b5cf075e9e2f",
+    "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+    "summary": "The current decision state for classifying water as a renewable resource suffers from several critical weaknesses. Key assumptions with low confidence and high impact are underweighted, the binary option structure prevents a nuanced conditional conclusion explicitly sought by the decision brief, and the pervasive use of qualitative measurements for inherently quantifiable criteria introduces significant subjectivity. These issues collectively elevate the risk of an inaccurate or misleading classification.",
+    "overall_risk": "high",
+    "provider": "litellm",
+    "model": "tradeofflab-default",
+    "created_at": "2026-05-31T11:08:58.058932Z",
+    "updated_at": "2026-05-31T11:08:58.058932Z",
+    "findings": [
+      {
+        "id": "adversarial-review-finding-2ec8dde61d3540c98fb0d366a8c1381d",
+        "review_id": "adversarial-review-eaafa1ffa52d438f8e17b5cf075e9e2f",
+        "title": "Critical Energy Viability Risk Underweighted",
+        "severity": "high",
+        "critique": "The assumption regarding the economic and environmental sustainability of energy for widespread water treatment, desalination, and distribution (`assumption-b827394c4fab48d096709247d3fd40a2`) is explicitly stated to have 'low' confidence and 'high' impact if false. Despite this, the 'Energy Requirements' criterion (`criterion-929526dba7a4451e812473b64df1cf2d`) is assigned the lowest weight (0.05) among all criteria. This disproportionately reduces the influence of a highly uncertain and impactful factor on the overall decision.",
+        "consequence": "If the energy assumption proves false, the practical renewability of water for civilization becomes severely compromised, regardless of other factors. The low weighting of this criterion means the decision matrix might recommend an option that is fundamentally unsustainable due to energy constraints, without adequately reflecting this critical risk in its aggregated score.",
+        "mitigation_test": "Re-evaluate the weight of the 'Energy Requirements' criterion to reflect the 'low' confidence and 'high' impact of its underlying assumption. Consider a sensitivity analysis where this criterion's weight is significantly increased to see how it alters the recommended option. Additionally, require more robust evidence or a higher confidence level for `assumption-b827394c4fab48d096709247d3fd40a2` before finalizing the decision.",
+        "created_at": "2026-05-31T11:08:58.058932Z",
+        "updated_at": "2026-05-31T11:08:58.058932Z"
+      },
+      {
+        "id": "adversarial-review-finding-9900ae5305fa49ca8f34b19b7aa40b11",
+        "review_id": "adversarial-review-eaafa1ffa52d438f8e17b5cf075e9e2f",
+        "title": "Binary Options Preclude Nuanced Conditional Classification",
+        "severity": "medium",
+        "critique": "The decision brief explicitly asks to 'Determine whether a binary classification is adequate or whether a conditional classification is more accurate.' However, the provided options are strictly binary ('Water is a renewable resource' vs. 'Water is not a renewable resource'). This structure inherently prevents the decision from concluding with a nuanced, conditional classification, even if the evidence strongly supports it. The analysis is forced into a 'yes/no' answer, potentially oversimplifying a complex issue.",
+        "consequence": "The final decision may fail to capture the true complexity of water renewability, which is acknowledged in the context as dependent on 'scale, geography, and human intervention.' This could lead to an oversimplified public or policy statement that does not accurately reflect the underlying challenges and conditions.",
+        "mitigation_test": "Introduce a third option, such as 'Water is conditionally renewable,' or reframe the existing options to allow for a conditional outcome (e.g., 'Water is renewable under specific conditions X, Y, Z'). The criteria and assessments should then be re-evaluated against this more nuanced option to see if it provides a better fit for the decision's stated goal.",
+        "created_at": "2026-05-31T11:08:58.058932Z",
+        "updated_at": "2026-05-31T11:08:58.058932Z"
+      },
+      {
+        "id": "adversarial-review-finding-90ee49acf0bf4f089cebaefbb2d96bd2",
+        "review_id": "adversarial-review-eaafa1ffa52d438f8e17b5cf075e9e2f",
+        "title": "Subjectivity Introduced by Qualitative Scoring of Quantifiable Criteria",
+        "severity": "medium",
+        "critique": "Criteria such as 'Accessibility,' 'Energy Requirements,' 'Economic Viability,' 'Technological Scalability,' and 'Long-Term Sustainability' are all designated with `measurement_type: 'qualitative'`. These criteria inherently involve aspects that could be quantified (e.g., liters per capita, kWh per cubic meter, cost per cubic meter, population served, projected resource depletion rates). Relying solely on qualitative assessments for these critical, high-weight criteria (e.g., Long-Term Sustainability at 0.3, Accessibility at 0.2, Technological Scalability at 0.2) introduces significant subjectivity and reduces the rigor of the analysis.",
+        "consequence": "The qualitative scoring may mask critical quantitative differences between options, leading to a less objective and potentially flawed recommendation. Without concrete metrics, it's difficult to verify the scores or compare them consistently, making the decision vulnerable to bias or incomplete data.",
+        "mitigation_test": "Redefine the `measurement_type` for key criteria to 'quantitative' or 'semi-quantitative' where possible. For example, 'Energy Requirements' could use 'kWh/m³,' 'Economic Viability' could use 'cost/m³,' and 'Technological Scalability' could use 'population served by current tech capacity.' Require specific data points or ranges to support scores for these criteria, enhancing objectivity and verifiability.",
+        "created_at": "2026-05-31T11:08:58.058932Z",
+        "updated_at": "2026-05-31T11:08:58.058932Z"
+      },
+      {
+        "id": "adversarial-review-finding-1001191f0cac4323979b018302df2192",
+        "review_id": "adversarial-review-eaafa1ffa52d438f8e17b5cf075e9e2f",
+        "title": "Unsubstantiated Optimism in Global Technological Scalability",
+        "severity": "medium",
+        "critique": "Assumption 1 states that 'Current and near-future water treatment and desalination technologies can be scaled globally to meet the freshwater demands of a growing population without significant technological breakthroughs,' with 'medium' confidence. The rationale for 'Water is a renewable resource' under 'Technological Scalability' (score 3.0) acknowledges 'significant infrastructure and energy challenges (Assumption 1)' but still assigns a moderate score. The decision state lacks concrete evidence or detailed projections to support the 'medium' confidence in global scalability, especially considering the 'high' impact if this assumption is false.",
+        "consequence": "If current technologies cannot scale as assumed, or if the 'significant infrastructure and energy challenges' prove insurmountable or too slow to address, then the 'renewable' classification becomes practically invalid for a large portion of the global population. This could lead to a false sense of security regarding future water availability.",
+        "mitigation_test": "Require specific data on current global installed capacity for advanced water treatment and desalination, projected growth rates, and a detailed analysis of the infrastructure and energy investment required to meet future demand projections. Compare these against historical deployment rates and economic feasibility studies to provide stronger evidence for the 'medium' confidence, or adjust the confidence level and corresponding scores if evidence is lacking.",
+        "created_at": "2026-05-31T11:08:58.058932Z",
+        "updated_at": "2026-05-31T11:08:58.058932Z"
+      }
+    ]
+  },
+  "recommendation_memo": {
+    "id": "recommendation-memo-7825eb0e7ad545bb9c2ff259f3a84d63",
+    "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
+    "recommended_option_id": "option-05fd40d031144accaf27d34203493799",
+    "fallback_option_id": null,
+    "rationale": "From the perspective of current civilization, water cannot be definitively classified as a renewable resource. While the hydrological cycle ensures continuous physical replenishment (as noted by Option 1's high score on Physical Consistency), the practical accessibility, usability, and long-term sustainability of freshwater are severely constrained. This option scores significantly higher on criteria reflecting real-world challenges such as Accessibility, Energy Requirements, Economic Viability, Technological Scalability, and Long-Term Sustainability. Accessible freshwater is limited, aquifers are being depleted faster than they recharge, and pollution renders significant portions unusable. The energy and economic costs required for widespread treatment, desalination, and distribution are substantial and often prohibitive, challenging the notion of indefinite renewability for billions of people. The low confidence in the assumption regarding the economic viability of energy for water treatment (assumption-b827394c4fab48d096709247d3fd40a2) further underscores these practical limitations, despite its underweighted influence in the initial scoring.",
+    "confidence": "medium",
+    "provider": "litellm",
+    "model": "tradeofflab-default",
+    "created_at": "2026-05-31T11:10:11.761126Z",
+    "updated_at": "2026-05-31T11:10:11.761126Z",
+    "conditions": [
+      {
+        "id": "recommendation-condition-b7bfe362fabe41ea8c9b1c6086c8ba44",
+        "memo_id": "recommendation-memo-7825eb0e7ad545bb9c2ff259f3a84d63",
+        "position": 0,
+        "statement": "This classification holds unless significant, globally scalable, and economically viable breakthroughs in energy-efficient water treatment and desalination technologies emerge, fundamentally altering the energy and economic cost landscape for freshwater access.",
+        "created_at": "2026-05-31T11:10:11.761126Z",
+        "updated_at": "2026-05-31T11:10:11.761126Z"
+      },
+      {
+        "id": "recommendation-condition-963ca922c9024e4abe81875ad5bda7cd",
+        "memo_id": "recommendation-memo-7825eb0e7ad545bb9c2ff259f3a84d63",
+        "position": 1,
+        "statement": "This classification holds unless global infrastructure for water capture, purification, and distribution can be developed and maintained at a pace and cost that demonstrably keeps up with population growth and climate change impacts across all regions.",
+        "created_at": "2026-05-31T11:10:11.761126Z",
+        "updated_at": "2026-05-31T11:10:11.761126Z"
+      },
+      {
+        "id": "recommendation-condition-2d6ab245f9c249dba17edbbd41b10ff2",
+        "memo_id": "recommendation-memo-7825eb0e7ad545bb9c2ff259f3a84d63",
+        "position": 2,
+        "statement": "This classification holds unless human activities drastically reduce freshwater pollution, or remediation technologies become universally effective and affordable, ensuring a consistent supply of usable water without prohibitive intervention.",
+        "created_at": "2026-05-31T11:10:11.761126Z",
+        "updated_at": "2026-05-31T11:10:11.761126Z"
+      },
+      {
+        "id": "recommendation-condition-11eada72ba8448a29d911d85af3ee45d",
+        "memo_id": "recommendation-memo-7825eb0e7ad545bb9c2ff259f3a84d63",
+        "position": 3,
+        "statement": "This classification is made within the constraint of the provided binary options; a more nuanced, conditional classification would likely be more accurate but is not available as a choice.",
+        "created_at": "2026-05-31T11:10:11.761126Z",
+        "updated_at": "2026-05-31T11:10:11.761126Z"
+      }
+    ]
+  }
+}
