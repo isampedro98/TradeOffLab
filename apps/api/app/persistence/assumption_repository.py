@@ -165,6 +165,48 @@ class AssumptionRepository:
         self.session.commit()
         return [self._to_domain(record) for record in records]
 
+    def replace_selected(
+        self,
+        decision_id: str,
+        assumption_ids: list[str],
+        payloads: list[AssumptionCreate],
+    ) -> list[Assumption]:
+        now = datetime.now(UTC)
+        records_to_replace = self.session.execute(
+            select(AssumptionRecord).where(
+                AssumptionRecord.decision_id == decision_id,
+                AssumptionRecord.id.in_(assumption_ids),
+            )
+        ).scalars().all()
+
+        if len(records_to_replace) != len(assumption_ids):
+            raise ValueError(
+                "One or more selected assumptions could not be found for this decision."
+            )
+
+        for record in records_to_replace:
+            self.session.delete(record)
+
+        self.session.flush()
+
+        replacement_records = [
+            AssumptionRecord(
+                id=f"assumption-{uuid4().hex}",
+                decision_id=decision_id,
+                statement=payload.statement,
+                confidence=payload.confidence,
+                impact_if_false=payload.impact_if_false,
+                validation_method=payload.validation_method,
+                created_at=now,
+                updated_at=now,
+            )
+            for payload in payloads
+        ]
+        self.session.add_all(replacement_records)
+        self._touch_decision(decision_id, timestamp=now)
+        self.session.commit()
+        return self.list_for_decision(decision_id)
+
     def _touch_decision(self, decision_id: str, *, timestamp: datetime) -> None:
         decision = self.session.get(DecisionRecord, decision_id)
         if decision is not None:

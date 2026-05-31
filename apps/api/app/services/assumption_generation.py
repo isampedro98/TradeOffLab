@@ -17,14 +17,15 @@ from app.services.litellm_client import LiteLLMClient, LiteLLMError
 class AssumptionGenerationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    count: int = Field(default=4, ge=3, le=7)
+    count: int = Field(default=4, ge=1, le=7)
     replace_existing: bool = False
+    assumption_ids: list[str] = Field(default_factory=list, max_length=7)
 
 
 class GeneratedAssumptionsPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    assumptions: list[AssumptionCreate] = Field(min_length=3, max_length=7)
+    assumptions: list[AssumptionCreate] = Field(min_length=1, max_length=7)
 
 
 class AssumptionGenerationResponse(BaseModel):
@@ -67,27 +68,52 @@ class AssumptionGenerationService:
         if not criteria:
             raise ValueError("Assumption generation requires at least one criterion.")
 
+        existing_assumptions = self.assumption_repository.list_for_decision(decision_id)
+        selected_assumptions = [
+            assumption
+            for assumption in existing_assumptions
+            if assumption.id in set(request.assumption_ids)
+        ]
+        if request.assumption_ids and len(selected_assumptions) != len(request.assumption_ids):
+            raise ValueError(
+                "One or more selected assumptions could not be found for this decision."
+            )
+
+        generation_count = len(request.assumption_ids) if request.assumption_ids else request.count
         generated = self._generate_payload(
             decision=decision,
             options=options,
             criteria=criteria,
-            count=request.count,
+            count=generation_count,
+            existing_assumptions=existing_assumptions,
+            selected_assumptions=selected_assumptions,
         )
 
-        if request.replace_existing:
-            assumptions = self.assumption_repository.replace_for_decision(
+        if request.assumption_ids:
+            assumptions = self.assumption_repository.replace_selected(
+                decision_id,
+                request.assumption_ids,
+                generated.assumptions,
+            )
+            replaced_existing = True
+        elif request.replace_existing:
+            self.assumption_repository.replace_for_decision(
                 decision_id,
                 generated.assumptions,
             )
+            assumptions = self.assumption_repository.list_for_decision(decision_id)
+            replaced_existing = True
         else:
-            assumptions = self.assumption_repository.create_many(
+            self.assumption_repository.create_many(
                 decision_id,
                 generated.assumptions,
             )
+            assumptions = self.assumption_repository.list_for_decision(decision_id)
+            replaced_existing = False
 
         return AssumptionGenerationResponse(
             decision_id=decision_id,
-            replaced_existing=request.replace_existing,
+            replaced_existing=replaced_existing,
             model=self.client.model,
             assumptions=assumptions,
         )
@@ -99,12 +125,16 @@ class AssumptionGenerationService:
         options: list[Option],
         criteria: list[Criterion],
         count: int,
+        existing_assumptions: list[Assumption],
+        selected_assumptions: list[Assumption],
     ) -> GeneratedAssumptionsPayload:
         base_messages = self._build_messages(
             decision=decision,
             options=options,
             criteria=criteria,
             count=count,
+            existing_assumptions=existing_assumptions,
+            selected_assumptions=selected_assumptions,
         )
 
         return self.client.generate_structured(
@@ -119,12 +149,30 @@ class AssumptionGenerationService:
         options: list[Option],
         criteria: list[Criterion],
         count: int,
+        existing_assumptions: list[Assumption],
+        selected_assumptions: list[Assumption],
     ) -> list[dict[str, str]]:
         decision_snapshot = {
             "decision": decision.model_dump(mode="json"),
             "options": [option.model_dump(mode="json") for option in options],
             "criteria": [criterion.model_dump(mode="json") for criterion in criteria],
+            "existing_assumptions": [
+                assumption.model_dump(mode="json") for assumption in existing_assumptions
+            ],
         }
+
+        user_instruction = (
+            f"Generate exactly {count} assumptions for this decision. "
+            "Each assumption must include statement, confidence, impact_if_false, "
+            "and validation_method. Keep them concrete and testable.\n\n"
+        )
+        if selected_assumptions:
+            user_instruction = (
+                f"Regenerate exactly {count} replacement assumptions for this decision. "
+                "Only replace the selected assumptions. Keep the overall set diverse, "
+                "avoid duplicating the preserved assumptions, and return only the new replacement assumptions.\n\n"
+                f"Selected assumptions to replace:\n{json.dumps([assumption.model_dump(mode='json') for assumption in selected_assumptions], indent=2)}\n\n"
+            )
 
         return [
             {
@@ -137,11 +185,6 @@ class AssumptionGenerationService:
             },
             {
                 "role": "user",
-                "content": (
-                    f"Generate exactly {count} assumptions for this decision. "
-                    "Each assumption must include statement, confidence, impact_if_false, "
-                    "and validation_method. Keep them concrete and testable.\n\n"
-                    f"{json.dumps(decision_snapshot, indent=2)}"
-                ),
+                "content": user_instruction + json.dumps(decision_snapshot, indent=2),
             },
         ]

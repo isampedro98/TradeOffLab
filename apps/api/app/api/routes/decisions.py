@@ -87,6 +87,20 @@ def update_decision(
     return decision
 
 
+@router.delete("/{decision_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_decision(
+    decision_id: str,
+    session: Session = Depends(get_db_session),
+) -> None:
+    repository = DecisionRepository(session)
+    deleted = repository.delete(decision_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Decision '{decision_id}' was not found.",
+        )
+
+
 @router.post("/seed/bootstrap-example", response_model=Decision)
 def seed_bootstrap_example(session: Session = Depends(get_db_session)) -> Decision:
     assumption_repository = AssumptionRepository(session)

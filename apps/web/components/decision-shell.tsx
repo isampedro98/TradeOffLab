@@ -123,12 +123,6 @@ type CreateCriterionPayload = {
   measurement_type: CriterionMeasurementType;
 };
 
-const traceNotes = [
-  "Persisted decisions now come from the FastAPI API backed by Postgres.",
-  "A database-platform example remains available as a bootstrap fixture through the API.",
-  "This workspace remains structured-first: stored records, explicit fields, no chat transcript.",
-];
-
 const initialDecisionDraft: CreateDecisionPayload = {
   title: "",
   decision_brief: "",
@@ -199,6 +193,7 @@ export function DecisionShell() {
   const [options, setOptions] = useState<OptionRecord[]>([]);
   const [criteria, setCriteria] = useState<CriterionRecord[]>([]);
   const [assumptions, setAssumptions] = useState<Assumption[]>([]);
+  const [selectedAssumptionIds, setSelectedAssumptionIds] = useState<string[]>([]);
   const [tradeoffMatrix, setTradeoffMatrix] = useState<TradeoffMatrix | null>(
     null,
   );
@@ -246,6 +241,9 @@ export function DecisionShell() {
     decisions.find((decision) => decision.id === activeDecisionId) ?? null;
   const canGenerateAssumptions =
     !!activeDecision && options.length > 0 && criteria.length > 0;
+  const canRegenerateSelectedAssumptions =
+    canGenerateAssumptions &&
+    (assumptions.length === 0 || selectedAssumptionIds.length > 0);
   const canGenerateTradeoffMatrix =
     !!activeDecision &&
     options.length > 0 &&
@@ -323,6 +321,7 @@ export function DecisionShell() {
       setOptions([]);
       setCriteria([]);
       setAssumptions([]);
+      setSelectedAssumptionIds([]);
       setTradeoffMatrix(null);
       setOptionErrorMessage(null);
       setCriterionErrorMessage(null);
@@ -410,8 +409,14 @@ export function DecisionShell() {
 
       const payload = (await response.json()) as Assumption[];
       setAssumptions(payload);
+      setSelectedAssumptionIds((current) =>
+        current.filter((assumptionId) =>
+          payload.some((assumption) => assumption.id === assumptionId),
+        ),
+      );
     } catch (error) {
       setAssumptions([]);
+      setSelectedAssumptionIds([]);
       setAssumptionErrorMessage(
         error instanceof Error ? error.message : "Failed to load assumptions.",
       );
@@ -493,6 +498,37 @@ export function DecisionShell() {
       setIsSubmittingDecision(false);
       setDecisionErrorMessage(
         error instanceof Error ? error.message : "Failed to create decision.",
+      );
+    }
+  }
+
+  async function handleDeleteDecision() {
+    if (!activeDecisionId || !activeDecision) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete decision "${activeDecision.title}"? This removes its options, criteria, assumptions, and tradeoff matrix.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDecisionErrorMessage(null);
+
+    try {
+      const response = await fetch(apiUrl(`/api/v1/decisions/${activeDecisionId}`), {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete decision (${response.status})`);
+      }
+
+      await loadDecisions();
+    } catch (error) {
+      setDecisionErrorMessage(
+        error instanceof Error ? error.message : "Failed to delete decision.",
       );
     }
   }
@@ -635,7 +671,7 @@ export function DecisionShell() {
   }
 
   async function handleGenerateAssumptions() {
-    if (!activeDecisionId || !canGenerateAssumptions) {
+    if (!activeDecisionId || !canRegenerateSelectedAssumptions) {
       return;
     }
 
@@ -652,8 +688,9 @@ export function DecisionShell() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            count: 4,
-            replace_existing: true,
+            count: assumptions.length === 0 ? 4 : selectedAssumptionIds.length,
+            replace_existing: assumptions.length === 0,
+            assumption_ids: selectedAssumptionIds,
           }),
         },
       );
@@ -678,10 +715,11 @@ export function DecisionShell() {
         assumptions: Assumption[];
       };
       setAssumptions(payload.assumptions);
+      setSelectedAssumptionIds([]);
       setAssumptionSuccessMessage(
-        payload.replaced_existing
-          ? `Generated ${payload.assumptions.length} assumptions and replaced the previous set.`
-          : `Generated ${payload.assumptions.length} assumptions.`,
+        assumptions.length === 0
+          ? `Generated ${payload.assumptions.length} assumptions.`
+          : `Regenerated ${selectedAssumptionIds.length} selected assumptions.`,
       );
       await loadDecisions(activeDecisionId);
     } catch (error) {
@@ -693,6 +731,22 @@ export function DecisionShell() {
     } finally {
       setIsGeneratingAssumptions(false);
     }
+  }
+
+  function toggleAssumptionSelection(assumptionId: string) {
+    setSelectedAssumptionIds((current) =>
+      current.includes(assumptionId)
+        ? current.filter((id) => id !== assumptionId)
+        : [...current, assumptionId],
+    );
+  }
+
+  function selectAllAssumptions() {
+    setSelectedAssumptionIds(assumptions.map((assumption) => assumption.id));
+  }
+
+  function clearAssumptionSelection() {
+    setSelectedAssumptionIds([]);
   }
 
   async function handleGenerateTradeoffMatrix() {
@@ -883,6 +937,13 @@ export function DecisionShell() {
                   <span className="rounded-full border border-paper/15 px-3 py-1">
                     Updated {formatTimestamp(activeDecision.updated_at)}
                   </span>
+                  <button
+                    type="button"
+                    onClick={handleDeleteDecision}
+                    className="rounded-full border border-red-300/50 px-3 py-1 text-red-100 transition hover:border-red-200 hover:bg-red-500/20"
+                  >
+                    Delete Decision
+                  </button>
                 </div>
               ) : null}
             </div>
@@ -923,6 +984,12 @@ export function DecisionShell() {
                 </p>
               </div>
             </div>
+
+            {decisionErrorMessage && !isCreateDecisionOpen ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {decisionErrorMessage}
+              </div>
+            ) : null}
 
             <section className="rounded-[28px] border border-dashed border-black/15 bg-white/65 p-6">
               <p className="text-xs uppercase tracking-[0.3em] text-steel">
@@ -1249,32 +1316,6 @@ export function DecisionShell() {
             </div>
 
             <section className="rounded-[28px] border border-black/10 bg-white/65 p-6">
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-                <div className="rounded-[24px] bg-ember px-5 py-6 text-paper">
-                  <p className="font-[family-name:var(--font-heading)] text-xs uppercase tracking-[0.3em] text-paper/75">
-                    Decision Trace
-                  </p>
-                  <p className="mt-4 max-w-2xl text-lg leading-8">
-                    The UI is now grounded in persisted records. The next layer
-                    is not more chat, it is traceable generation over stored
-                    decision state.
-                  </p>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
-                  {traceNotes.map((note) => (
-                    <div
-                      key={note}
-                      className="rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm leading-6 text-ink/80"
-                    >
-                      {note}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-[28px] border border-black/10 bg-white/65 p-6">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-steel">
@@ -1292,18 +1333,23 @@ export function DecisionShell() {
                 <button
                   type="button"
                   onClick={handleGenerateAssumptions}
-                  disabled={!canGenerateAssumptions || isGeneratingAssumptions}
+                  disabled={
+                    !canRegenerateSelectedAssumptions || isGeneratingAssumptions
+                  }
                   className="rounded-full border border-ink px-4 py-2 text-sm font-medium text-ink transition hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isGeneratingAssumptions
                     ? "Generating..."
-                    : "Generate Assumptions"}
+                    : assumptions.length > 0
+                      ? "Regenerate Selected"
+                      : "Generate Assumptions"}
                 </button>
               </div>
 
               <p className="mt-3 text-sm text-ink/65">
-                Generate Assumptions replaces the current assumption set for this
-                decision.
+                {assumptions.length > 0
+                  ? "Select the assumptions you want to replace, then regenerate only those cards."
+                  : "Generate an initial assumption set from the current decision, options, and criteria."}
               </p>
 
               <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -1341,6 +1387,28 @@ export function DecisionShell() {
                 </div>
               ) : null}
 
+              {assumptions.length > 0 ? (
+                <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-ink/70">
+                  <span>
+                    {selectedAssumptionIds.length} of {assumptions.length} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={selectAllAssumptions}
+                    className="rounded-full border border-black/10 px-3 py-1 text-xs transition hover:border-ink hover:text-ink"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearAssumptionSelection}
+                    className="rounded-full border border-black/10 px-3 py-1 text-xs transition hover:border-ink hover:text-ink"
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : null}
+
               {assumptionErrorMessage ? (
                 <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                   {assumptionErrorMessage}
@@ -1364,13 +1432,24 @@ export function DecisionShell() {
                       key={assumption.id}
                       className="rounded-[24px] border border-black/10 bg-paper p-5"
                     >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-black/[0.05] px-3 py-1 text-xs text-ink/70">
-                          {confidenceLabel(assumption.confidence)} confidence
-                        </span>
-                        <span className="rounded-full bg-black/[0.05] px-3 py-1 text-xs text-ink/70">
-                          Updated {formatTimestamp(assumption.updated_at)}
-                        </span>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-black/[0.05] px-3 py-1 text-xs text-ink/70">
+                            {confidenceLabel(assumption.confidence)} confidence
+                          </span>
+                          <span className="rounded-full bg-black/[0.05] px-3 py-1 text-xs text-ink/70">
+                            Updated {formatTimestamp(assumption.updated_at)}
+                          </span>
+                        </div>
+                        <label className="flex items-center gap-2 text-xs text-ink/70">
+                          <input
+                            type="checkbox"
+                            checked={selectedAssumptionIds.includes(assumption.id)}
+                            onChange={() => toggleAssumptionSelection(assumption.id)}
+                            className="h-4 w-4 rounded border-black/20 text-ink"
+                          />
+                          Select
+                        </label>
                       </div>
 
                       <p className="mt-4 font-[family-name:var(--font-heading)] text-lg font-semibold text-ink">

@@ -76,6 +76,15 @@ class DecisionRepository:
         self.session.refresh(record)
         return self._to_domain(record)
 
+    def delete(self, decision_id: str) -> bool:
+        record = self.session.get(DecisionRecord, decision_id)
+        if record is None:
+            return False
+
+        self.session.delete(record)
+        self.session.commit()
+        return True
+
     @staticmethod
     def _to_domain(record: DecisionRecord) -> Decision:
         return Decision(
