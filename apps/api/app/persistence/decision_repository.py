@@ -31,8 +31,6 @@ class DecisionRepository:
             decision_brief=payload.decision_brief,
             question=payload.question,
             context=payload.context,
-            type=payload.type,
-            status=payload.status,
             created_at=now,
             updated_at=now,
         )
@@ -66,8 +64,6 @@ class DecisionRepository:
             decision_brief=decision.decision_brief,
             question=decision.question,
             context=decision.context,
-            type=decision.type,
-            status=decision.status,
             created_at=decision.created_at,
             updated_at=decision.updated_at,
         )
@@ -93,8 +89,6 @@ class DecisionRepository:
             decision_brief=record.decision_brief,
             question=record.question,
             context=record.context,
-            type=record.type,
-            status=record.status,
             created_at=record.created_at,
             updated_at=record.updated_at,
         )

@@ -14,16 +14,6 @@ export const sections = [
 
 export type WorkspaceSection = (typeof sections)[number];
 
-export const decisionTypes = [
-  { value: "erp_adoption", label: "ERP Adoption" },
-  { value: "architecture", label: "Architecture" },
-  { value: "cloud_provider", label: "Cloud Provider" },
-  { value: "build_vs_buy", label: "Build vs Buy" },
-  { value: "procurement_automation", label: "Procurement Automation" },
-  { value: "software_stack", label: "Software Stack" },
-  { value: "strategic_technical", label: "Strategic Technical" },
-] as const;
-
 export const criterionMeasurementTypes = [
   { value: "qualitative", label: "Qualitative" },
   { value: "numeric", label: "Numeric" },
@@ -31,8 +21,6 @@ export const criterionMeasurementTypes = [
   { value: "ordinal", label: "Ordinal" },
 ] as const;
 
-export type DecisionType = (typeof decisionTypes)[number]["value"];
-export type DecisionStatus = "draft" | "in_review" | "recommended" | "archived";
 export type CriterionMeasurementType =
   (typeof criterionMeasurementTypes)[number]["value"];
 
@@ -42,8 +30,6 @@ export type Decision = {
   decision_brief: string;
   question: string;
   context: string;
-  type: DecisionType;
-  status: DecisionStatus;
   created_at: string;
   updated_at: string;
 };
@@ -179,8 +165,6 @@ export type CreateDecisionPayload = {
   decision_brief: string;
   question: string;
   context: string;
-  type: DecisionType;
-  status: DecisionStatus;
 };
 
 export type CreateOptionPayload = {
@@ -206,8 +190,6 @@ export const initialDecisionDraft: CreateDecisionPayload = {
   decision_brief: "",
   question: "",
   context: "",
-  type: "software_stack",
-  status: "draft",
 };
 
 export const initialOptionDraft: CreateOptionPayload = {
@@ -241,10 +223,6 @@ export function formatTimestamp(timestamp: string): string {
   }).format(new Date(timestamp));
 }
 
-export function typeLabel(type: DecisionType): string {
-  return decisionTypes.find((item) => item.value === type)?.label ?? type;
-}
-
 export function measurementTypeLabel(type: CriterionMeasurementType): string {
   return (
     criterionMeasurementTypes.find((item) => item.value === type)?.label ?? type
@@ -267,19 +245,6 @@ export function recommendationConfidenceLabel(
 
 export function normalizeText(value: string): string {
   return value.trim().toLowerCase();
-}
-
-export function statusClasses(status: DecisionStatus): string {
-  switch (status) {
-    case "recommended":
-      return "bg-emerald-100 text-emerald-900";
-    case "in_review":
-      return "bg-amber-100 text-amber-900";
-    case "archived":
-      return "bg-slate-200 text-slate-700";
-    default:
-      return "bg-sky-100 text-sky-900";
-  }
 }
 
 export type DecisionWorkspaceController = {

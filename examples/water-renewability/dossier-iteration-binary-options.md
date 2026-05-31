@@ -17,8 +17,6 @@ Determine whether a binary classification is adequate or whether a conditional c
 ## Decision Metadata
 
 - Decision ID: `decision-16c4b82b19304918946ef80d1679e892`
-- Type: `strategic_technical`
-- Status: `recommended`
 - Created At: `2026-05-31T10:42:56.981036+00:00`
 - Updated At: `2026-05-31T11:10:11.761126+00:00`
 

@@ -1,24 +1,6 @@
 from datetime import UTC, datetime
-from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
-
-
-class DecisionStatus(StrEnum):
-    DRAFT = "draft"
-    IN_REVIEW = "in_review"
-    RECOMMENDED = "recommended"
-    ARCHIVED = "archived"
-
-
-class DecisionType(StrEnum):
-    ERP_ADOPTION = "erp_adoption"
-    ARCHITECTURE = "architecture"
-    CLOUD_PROVIDER = "cloud_provider"
-    BUILD_VS_BUY = "build_vs_buy"
-    PROCUREMENT_AUTOMATION = "procurement_automation"
-    SOFTWARE_STACK = "software_stack"
-    STRATEGIC_TECHNICAL = "strategic_technical"
 
 
 class Decision(BaseModel):
@@ -29,8 +11,6 @@ class Decision(BaseModel):
     decision_brief: str
     question: str
     context: str
-    type: DecisionType
-    status: DecisionStatus
     created_at: datetime
     updated_at: datetime
 
@@ -42,8 +22,6 @@ class DecisionCreate(BaseModel):
     decision_brief: str
     question: str
     context: str
-    type: DecisionType
-    status: DecisionStatus = DecisionStatus.DRAFT
 
 
 class DecisionUpdate(BaseModel):
@@ -53,8 +31,6 @@ class DecisionUpdate(BaseModel):
     decision_brief: str | None = None
     question: str | None = None
     context: str | None = None
-    type: DecisionType | None = None
-    status: DecisionStatus | None = None
 
 
 def build_bootstrap_decision() -> Decision:
@@ -69,8 +45,6 @@ def build_bootstrap_decision() -> Decision:
             "The decision must balance operational complexity, ecosystem fit, licensing exposure, "
             "and long-term maintainability."
         ),
-        type=DecisionType.SOFTWARE_STACK,
-        status=DecisionStatus.DRAFT,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
     )

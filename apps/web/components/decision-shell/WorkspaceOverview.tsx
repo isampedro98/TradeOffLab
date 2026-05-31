@@ -1,8 +1,6 @@
 import {
   formatTimestamp,
-  statusClasses,
   type DecisionWorkspaceController,
-  typeLabel,
 } from "./model";
 
 type Props = {
@@ -13,20 +11,9 @@ export function WorkspaceOverview({ controller }: Props) {
   return (
     <>
       <div className="rounded-[28px] bg-ink p-6 text-paper">
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="font-[family-name:var(--font-heading)] text-xs uppercase tracking-[0.35em] text-paper/60">
-            Active Decision
-          </p>
-          {controller.activeDecision ? (
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-medium ${statusClasses(
-                controller.activeDecision.status,
-              )}`}
-            >
-              {controller.activeDecision.status.replace("_", " ")}
-            </span>
-          ) : null}
-        </div>
+        <p className="font-[family-name:var(--font-heading)] text-xs uppercase tracking-[0.35em] text-paper/60">
+          Active Decision
+        </p>
 
         <h2 className="mt-3 max-w-3xl font-[family-name:var(--font-heading)] text-3xl font-semibold leading-tight md:text-4xl">
           {controller.activeDecision?.title ??
@@ -40,9 +27,6 @@ export function WorkspaceOverview({ controller }: Props) {
 
         {controller.activeDecision ? (
           <div className="mt-5 flex flex-wrap gap-2 text-xs text-paper/70">
-            <span className="rounded-full border border-paper/15 px-3 py-1">
-              {typeLabel(controller.activeDecision.type)}
-            </span>
             <span className="rounded-full border border-paper/15 px-3 py-1">
               {controller.activeDecision.id}
             </span>
@@ -113,12 +97,6 @@ export function WorkspaceOverview({ controller }: Props) {
             </div>
 
             <div className="flex flex-wrap gap-2 text-xs text-ink/65">
-              <span className="rounded-full border border-black/10 px-3 py-1">
-                {typeLabel(controller.activeDecision.type)}
-              </span>
-              <span className="rounded-full border border-black/10 px-3 py-1">
-                {controller.activeDecision.status.replace("_", " ")}
-              </span>
               <span className="rounded-full border border-black/10 px-3 py-1">
                 Updated {formatTimestamp(controller.activeDecision.updated_at)}
               </span>

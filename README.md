@@ -139,9 +139,8 @@ Decision
 - decision_brief
 - question
 - context
-- type
-- status
 - created_at
+- updated_at
 
 Criterion
 - id

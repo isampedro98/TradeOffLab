@@ -5,8 +5,6 @@
     "decision_brief": "Evaluate whether water should be classified as a renewable resource when considering physical availability, technological capabilities, energy requirements, economic feasibility, infrastructure constraints, and long-term sustainability. The analysis aims to determine whether a binary classification is sufficient or whether renewability depends on scale, geography, and human intervention.",
     "question": "Can water be considered a renewable resource from the perspective of current civilization?",
     "context": "Water is commonly classified as a renewable resource due to the hydrological cycle. However, human access to freshwater depends on geographic distribution, infrastructure, energy consumption, treatment technologies, and economic constraints. This analysis seeks to evaluate whether the traditional classification remains valid when considering practical human use rather than purely planetary-scale physical processes.\n\nSuccess criteria:\nIdentify the strongest arguments for and against classifying water as renewable.\nQuantify major physical, technological, economic, and energy constraints.\nAssess the degree of scientific consensus.\nDetermine whether a binary classification is adequate or whether a conditional classification is more accurate.",
-    "type": "strategic_technical",
-    "status": "recommended",
     "created_at": "2026-05-31T10:42:56.981036Z",
     "updated_at": "2026-05-31T11:10:11.761126Z"
   },
@@ -138,7 +136,7 @@
       "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
       "title": "Established Facts",
       "summary": "Water is continuously renewed through the hydrological cycle, but only a small fraction of Earth's total water is readily accessible freshwater. Human access to usable water depends on geographic distribution, infrastructure, treatment technologies, energy availability, and economic feasibility. While water is commonly classified as a renewable resource, practical availability may be constrained by factors that differ significantly across regions and timescales. These facts establish the basis for evaluating whether water should be considered universally renewable or conditionally renewable.",
-      "source": "United States Geological Survey (USGS) – The Water Cycle & Freshwater Availability",
+      "source": "United States Geological Survey (USGS) \u2013 The Water Cycle & Freshwater Availability",
       "created_at": "2026-05-31T10:52:41.902586Z",
       "updated_at": "2026-05-31T10:52:41.902586Z"
     }
@@ -314,7 +312,7 @@
         "severity": "medium",
         "critique": "Criteria such as 'Accessibility,' 'Energy Requirements,' 'Economic Viability,' 'Technological Scalability,' and 'Long-Term Sustainability' are all designated with `measurement_type: 'qualitative'`. These criteria inherently involve aspects that could be quantified (e.g., liters per capita, kWh per cubic meter, cost per cubic meter, population served, projected resource depletion rates). Relying solely on qualitative assessments for these critical, high-weight criteria (e.g., Long-Term Sustainability at 0.3, Accessibility at 0.2, Technological Scalability at 0.2) introduces significant subjectivity and reduces the rigor of the analysis.",
         "consequence": "The qualitative scoring may mask critical quantitative differences between options, leading to a less objective and potentially flawed recommendation. Without concrete metrics, it's difficult to verify the scores or compare them consistently, making the decision vulnerable to bias or incomplete data.",
-        "mitigation_test": "Redefine the `measurement_type` for key criteria to 'quantitative' or 'semi-quantitative' where possible. For example, 'Energy Requirements' could use 'kWh/m³,' 'Economic Viability' could use 'cost/m³,' and 'Technological Scalability' could use 'population served by current tech capacity.' Require specific data points or ranges to support scores for these criteria, enhancing objectivity and verifiability.",
+        "mitigation_test": "Redefine the `measurement_type` for key criteria to 'quantitative' or 'semi-quantitative' where possible. For example, 'Energy Requirements' could use 'kWh/m\u00b3,' 'Economic Viability' could use 'cost/m\u00b3,' and 'Technological Scalability' could use 'population served by current tech capacity.' Require specific data points or ranges to support scores for these criteria, enhancing objectivity and verifiability.",
         "created_at": "2026-05-31T11:08:58.058932Z",
         "updated_at": "2026-05-31T11:08:58.058932Z"
       },

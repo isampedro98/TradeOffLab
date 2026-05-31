@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 
-import { decisionTypes, type DecisionWorkspaceController } from "./model";
+import type { DecisionWorkspaceController } from "./model";
 
 type Props = {
   controller: DecisionWorkspaceController;
@@ -118,51 +118,6 @@ export function NewDecisionModal({ controller }: Props) {
               placeholder="Describe the workload, operational constraints, hosting assumptions, and success criteria."
             />
           </label>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="text-xs uppercase tracking-[0.3em] text-steel">
-                Type
-              </span>
-              <select
-                value={controller.decisionDraft.type}
-                onChange={(event) =>
-                  controller.setDecisionDraft((current) => ({
-                    ...current,
-                    type: event.target.value as typeof current.type,
-                  }))
-                }
-                className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
-              >
-                {decisionTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="text-xs uppercase tracking-[0.3em] text-steel">
-                Status
-              </span>
-              <select
-                value={controller.decisionDraft.status}
-                onChange={(event) =>
-                  controller.setDecisionDraft((current) => ({
-                    ...current,
-                    status: event.target.value as typeof current.status,
-                  }))
-                }
-                className="mt-2 w-full rounded-2xl border border-black/10 bg-paper px-4 py-3 text-sm outline-none transition focus:border-ink"
-              >
-                <option value="draft">Draft</option>
-                <option value="in_review">In Review</option>
-                <option value="recommended">Recommended</option>
-                <option value="archived">Archived</option>
-              </select>
-            </label>
-          </div>
 
           {controller.decisionErrorMessage ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">

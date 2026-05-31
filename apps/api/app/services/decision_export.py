@@ -82,8 +82,6 @@ class DecisionExportService:
             "## Decision Metadata",
             "",
             f"- Decision ID: `{decision.id}`",
-            f"- Type: `{decision.type.value}`",
-            f"- Status: `{decision.status.value}`",
             f"- Created At: `{decision.created_at.isoformat()}`",
             f"- Updated At: `{decision.updated_at.isoformat()}`",
             "",

@@ -5,8 +5,6 @@
     "decision_brief": "Evaluate whether water should be classified as a renewable resource when considering physical availability, technological capabilities, energy requirements, economic feasibility, infrastructure constraints, and long-term sustainability. The analysis aims to determine whether a binary classification is sufficient or whether renewability depends on scale, geography, and human intervention.",
     "question": "Can water be considered a renewable resource from the perspective of current civilization?",
     "context": "Water is commonly classified as a renewable resource due to the hydrological cycle. However, human access to freshwater depends on geographic distribution, infrastructure, energy consumption, treatment technologies, and economic constraints. This analysis seeks to evaluate whether the traditional classification remains valid when considering practical human use rather than purely planetary-scale physical processes.\n\nSuccess criteria:\nIdentify the strongest arguments for and against classifying water as renewable.\nQuantify major physical, technological, economic, and energy constraints.\nAssess the degree of scientific consensus.\nDetermine whether a binary classification is adequate or whether a conditional classification is more accurate.",
-    "type": "strategic_technical",
-    "status": "recommended",
     "created_at": "2026-05-31T10:42:56.981036Z",
     "updated_at": "2026-05-31T10:57:00.897693Z"
   },
@@ -146,7 +144,7 @@
       "decision_id": "decision-16c4b82b19304918946ef80d1679e892",
       "title": "Established Facts",
       "summary": "Water is continuously renewed through the hydrological cycle, but only a small fraction of Earth's total water is readily accessible freshwater. Human access to usable water depends on geographic distribution, infrastructure, treatment technologies, energy availability, and economic feasibility. While water is commonly classified as a renewable resource, practical availability may be constrained by factors that differ significantly across regions and timescales. These facts establish the basis for evaluating whether water should be considered universally renewable or conditionally renewable.",
-      "source": "United States Geological Survey (USGS) – The Water Cycle & Freshwater Availability",
+      "source": "United States Geological Survey (USGS) \u2013 The Water Cycle & Freshwater Availability",
       "created_at": "2026-05-31T10:52:41.902586Z",
       "updated_at": "2026-05-31T10:52:41.902586Z"
     }
@@ -371,7 +369,7 @@
         "severity": "medium",
         "critique": "The decision's success criteria explicitly require 'Quantify major physical, technological, economic, and energy constraints.' However, the provided options, criteria descriptions, and assumption validations are largely qualitative (e.g., 'prohibitively expensive,' 'significant energy needed'). While validation methods suggest 'model future energy demand' or 'review global water demand projections,' no such quantification is presented in the current state.",
         "consequence": "Without concrete quantification of these constraints (e.g., energy per cubic meter for desalination, cost per liter for treatment, projected infrastructure investment gaps), the assessment remains abstract. The 'medium' and 'low' confidence levels in assumptions lack empirical backing, making it difficult to objectively compare options or understand the true scale of the challenges. The decision risks being based on generalized statements rather than data-driven insights.",
-        "mitigation_test": "Provide specific data points or ranges for key constraints. For instance, present current and projected energy consumption (kWh/m³) and cost ($/m³) for various water treatment and desalination methods, alongside global freshwater demand projections. Include estimated infrastructure investment needs and current funding gaps.",
+        "mitigation_test": "Provide specific data points or ranges for key constraints. For instance, present current and projected energy consumption (kWh/m\u00b3) and cost ($/m\u00b3) for various water treatment and desalination methods, alongside global freshwater demand projections. Include estimated infrastructure investment needs and current funding gaps.",
         "created_at": "2026-05-31T10:55:44.876213Z",
         "updated_at": "2026-05-31T10:55:44.876213Z"
       },
@@ -447,7 +445,7 @@
         "id": "recommendation-condition-b70c2c0c3fb64867a841d6f1050381a5",
         "memo_id": "recommendation-memo-efe4ffefc8e44d61a4222ee2a1078b27",
         "position": 4,
-        "statement": "Specific data points or ranges for energy consumption (kWh/m³), cost ($/m³), and infrastructure investment gaps must be established and regularly monitored to ensure the practical renewability holds true.",
+        "statement": "Specific data points or ranges for energy consumption (kWh/m\u00b3), cost ($/m\u00b3), and infrastructure investment gaps must be established and regularly monitored to ensure the practical renewability holds true.",
         "created_at": "2026-05-31T10:57:00.897693Z",
         "updated_at": "2026-05-31T10:57:00.897693Z"
       },
