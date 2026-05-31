@@ -51,7 +51,7 @@ TradeOffLab is an early but credible MVP scaffold for structured, AI-assisted de
 
 ### High
 
-- **No automated tests** — No `tests/`, pytest, or frontend test harness. Regressions in generation contracts or CRUD are manual-only.
+- **Limited automated tests** — LiteLLM client and generation service contract tests exist under `apps/api/tests/`; CRUD/export and frontend coverage are still missing.
 - **Documentation drift** — Until this audit, README/CHANGELOG/ROADMAP described bootstrap-only state while the API shipped full generation and export.
 - **Schema duplication** — TypeScript types in `apps/web/components/decision-shell/model.ts` mirror Pydantic models with no shared `packages/schemas` artifact.
 

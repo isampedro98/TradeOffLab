@@ -1,0 +1,42 @@
+from typing import Any
+
+from pydantic import BaseModel
+
+from app.services.litellm_client import LiteLLMClient
+
+
+class StubLiteLLMClient(LiteLLMClient):
+    """Records structured-generation calls and returns preconfigured payloads."""
+
+    def __init__(
+        self,
+        *,
+        responses: dict[type[BaseModel], BaseModel] | None = None,
+        model: str = "test-model",
+    ) -> None:
+        super().__init__(
+            base_url="http://litellm.test",
+            api_key="test-key",
+            model=model,
+            timeout_seconds=1.0,
+        )
+        self.responses = responses or {}
+        self.calls: list[dict[str, Any]] = []
+
+    def generate_structured(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        response_model: type[BaseModel],
+        temperature: float = 0.2,
+    ) -> BaseModel:
+        self.calls.append(
+            {
+                "messages": messages,
+                "response_model": response_model,
+                "temperature": temperature,
+            }
+        )
+        if response_model not in self.responses:
+            raise KeyError(f"No stub response registered for {response_model.__name__}")
+        return self.responses[response_model]

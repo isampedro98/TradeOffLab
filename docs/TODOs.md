@@ -6,7 +6,7 @@ For an implementation snapshot as of 2026-05-30, see `docs/AUDIT.md`.
 
 ## Highest Priority
 
-- Add pytest (or equivalent) for decision CRUD, export shape, and generation services with mocked LiteLLM
+- Extend pytest coverage to decision CRUD and export snapshots (LiteLLM contract tests added under `apps/api/tests/`)
 - Add minimal CI (API lint/test, web lint)
 - Populate `packages/schemas` from Pydantic models; align `apps/web` types with generated contracts
 - Persist generation provenance (model, provider, prompt id/version, timestamp) on AI-produced artifacts

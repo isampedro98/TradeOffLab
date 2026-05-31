@@ -8,6 +8,7 @@ The format is intentionally lightweight during early development. A stricter rel
 
 ### Added
 
+- LiteLLM contract tests (`apps/api/tests/`) with mocked HTTP and stubbed generation services
 - Persistence and CRUD for `Option`, `Criterion`, `Assumption`, and `Evidence`
 - `TradeoffMatrix`, `AdversarialReview`, and `RecommendationMemo` persistence
 - LiteLLM structured generation: assumptions, tradeoff matrix, adversarial review, recommendation memo

@@ -305,6 +305,16 @@ The repository includes a runnable local MVP:
 - `apps/api/alembic/`: schema migrations (run automatically on API startup)
 - `.env.example`: baseline environment variables
 
+## API Tests
+
+From the repo root (uses the API container):
+
+```bash
+docker compose run --rm --no-deps api sh -lc "pip install -q -r requirements-dev.txt && pytest -q"
+```
+
+Contract tests mock LiteLLM HTTP responses and stub generation services with in-memory SQLite.
+
 ## Getting Started
 
 1. Copy `.env.example` to `.env`
