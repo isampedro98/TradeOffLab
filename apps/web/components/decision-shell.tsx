@@ -1,9 +1,11 @@
 "use client";
 
+import { AdversarialReviewSection } from "./decision-shell/AdversarialReviewSection";
 import { AssumptionsSection } from "./decision-shell/AssumptionsSection";
 import { CriteriaSection } from "./decision-shell/CriteriaSection";
 import { NewDecisionModal } from "./decision-shell/NewDecisionModal";
 import { OptionsSection } from "./decision-shell/OptionsSection";
+import { RecommendationSection } from "./decision-shell/RecommendationSection";
 import { TradeoffsSection } from "./decision-shell/TradeoffsSection";
 import { useDecisionWorkspace } from "./decision-shell/useDecisionWorkspace";
 import { WorkspaceOverview } from "./decision-shell/WorkspaceOverview";
@@ -29,6 +31,8 @@ export function DecisionShell() {
 
               <AssumptionsSection controller={controller} />
               <TradeoffsSection controller={controller} />
+              <AdversarialReviewSection controller={controller} />
+              <RecommendationSection controller={controller} />
             </div>
           </section>
         </div>

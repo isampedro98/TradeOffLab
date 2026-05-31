@@ -9,6 +9,7 @@ import {
   initialOptionDraft,
   normalizeText,
   type Assumption,
+  type AdversarialReview,
   type CreateCriterionPayload,
   type CreateDecisionPayload,
   type CreateOptionPayload,
@@ -16,6 +17,7 @@ import {
   type Decision,
   type DecisionWorkspaceController,
   type OptionRecord,
+  type RecommendationMemo,
   type TradeoffMatrix,
 } from "./model";
 
@@ -30,6 +32,10 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
   const [tradeoffMatrix, setTradeoffMatrix] = useState<TradeoffMatrix | null>(
     null,
   );
+  const [adversarialReview, setAdversarialReview] =
+    useState<AdversarialReview | null>(null);
+  const [recommendationMemo, setRecommendationMemo] =
+    useState<RecommendationMemo | null>(null);
   const [activeDecisionId, setActiveDecisionId] = useState<string | null>(null);
   const [decisionDraft, setDecisionDraft] =
     useState<CreateDecisionPayload>(initialDecisionDraft);
@@ -43,11 +49,19 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
   const [isLoadingCriteria, setIsLoadingCriteria] = useState(false);
   const [isLoadingAssumptions, setIsLoadingAssumptions] = useState(false);
   const [isLoadingTradeoffMatrix, setIsLoadingTradeoffMatrix] = useState(false);
+  const [isLoadingAdversarialReview, setIsLoadingAdversarialReview] =
+    useState(false);
+  const [isLoadingRecommendationMemo, setIsLoadingRecommendationMemo] =
+    useState(false);
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [isSubmittingOption, setIsSubmittingOption] = useState(false);
   const [isSubmittingCriterion, setIsSubmittingCriterion] = useState(false);
   const [isGeneratingAssumptions, setIsGeneratingAssumptions] = useState(false);
   const [isGeneratingTradeoffMatrix, setIsGeneratingTradeoffMatrix] =
+    useState(false);
+  const [isGeneratingAdversarialReview, setIsGeneratingAdversarialReview] =
+    useState(false);
+  const [isGeneratingRecommendationMemo, setIsGeneratingRecommendationMemo] =
     useState(false);
   const [decisionErrorMessage, setDecisionErrorMessage] = useState<string | null>(
     null,
@@ -64,10 +78,18 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
   const [tradeoffMatrixErrorMessage, setTradeoffMatrixErrorMessage] = useState<
     string | null
   >(null);
+  const [adversarialReviewErrorMessage, setAdversarialReviewErrorMessage] =
+    useState<string | null>(null);
+  const [recommendationMemoErrorMessage, setRecommendationMemoErrorMessage] =
+    useState<string | null>(null);
   const [assumptionSuccessMessage, setAssumptionSuccessMessage] = useState<
     string | null
   >(null);
   const [tradeoffMatrixSuccessMessage, setTradeoffMatrixSuccessMessage] =
+    useState<string | null>(null);
+  const [adversarialReviewSuccessMessage, setAdversarialReviewSuccessMessage] =
+    useState<string | null>(null);
+  const [recommendationMemoSuccessMessage, setRecommendationMemoSuccessMessage] =
     useState<string | null>(null);
 
   const activeDecision =
@@ -82,6 +104,10 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     options.length > 0 &&
     criteria.length > 0 &&
     assumptions.length > 0;
+  const canGenerateAdversarialReview =
+    canGenerateTradeoffMatrix && tradeoffMatrix !== null;
+  const canGenerateRecommendationMemo =
+    canGenerateAdversarialReview && adversarialReview !== null;
   const optionMap = new Map(options.map((option) => [option.id, option]));
   const showDecisionBrief = activeDecision
     ? normalizeText(activeDecision.decision_brief) !==
@@ -156,10 +182,14 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
       setAssumptions([]);
       setSelectedAssumptionIds([]);
       setTradeoffMatrix(null);
+      setAdversarialReview(null);
+      setRecommendationMemo(null);
       setOptionErrorMessage(null);
       setCriterionErrorMessage(null);
       setAssumptionErrorMessage(null);
       setTradeoffMatrixErrorMessage(null);
+      setAdversarialReviewErrorMessage(null);
+      setRecommendationMemoErrorMessage(null);
       return;
     }
 
@@ -168,6 +198,8 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
       loadCriteria(activeDecisionId),
       loadAssumptions(activeDecisionId),
       loadTradeoffMatrix(activeDecisionId),
+      loadAdversarialReview(activeDecisionId),
+      loadRecommendationMemo(activeDecisionId),
     ]);
   }, [activeDecisionId]);
 
@@ -287,6 +319,76 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
       );
     } finally {
       setIsLoadingTradeoffMatrix(false);
+    }
+  }
+
+  async function loadAdversarialReview(decisionId: string) {
+    setIsLoadingAdversarialReview(true);
+    setAdversarialReviewErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${decisionId}/adversarial-review`),
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (response.status === 404) {
+        setAdversarialReview(null);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to load adversarial review (${response.status})`);
+      }
+
+      const payload = (await response.json()) as AdversarialReview;
+      setAdversarialReview(payload);
+    } catch (error) {
+      setAdversarialReview(null);
+      setAdversarialReviewErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to load adversarial review.",
+      );
+    } finally {
+      setIsLoadingAdversarialReview(false);
+    }
+  }
+
+  async function loadRecommendationMemo(decisionId: string) {
+    setIsLoadingRecommendationMemo(true);
+    setRecommendationMemoErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${decisionId}/recommendation-memo`),
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (response.status === 404) {
+        setRecommendationMemo(null);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to load recommendation memo (${response.status})`);
+      }
+
+      const payload = (await response.json()) as RecommendationMemo;
+      setRecommendationMemo(payload);
+    } catch (error) {
+      setRecommendationMemo(null);
+      setRecommendationMemoErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to load recommendation memo.",
+      );
+    } finally {
+      setIsLoadingRecommendationMemo(false);
     }
   }
 
@@ -543,6 +645,12 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
       };
       setAssumptions(payload.assumptions);
       setSelectedAssumptionIds([]);
+      setTradeoffMatrix(null);
+      setAdversarialReview(null);
+      setRecommendationMemo(null);
+      setTradeoffMatrixSuccessMessage(null);
+      setAdversarialReviewSuccessMessage(null);
+      setRecommendationMemoSuccessMessage(null);
       setAssumptionSuccessMessage(
         assumptions.length === 0
           ? `Generated ${payload.assumptions.length} assumptions.`
@@ -619,6 +727,10 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
         matrix: TradeoffMatrix;
       };
       setTradeoffMatrix(payload.matrix);
+      setAdversarialReview(null);
+      setRecommendationMemo(null);
+      setAdversarialReviewSuccessMessage(null);
+      setRecommendationMemoSuccessMessage(null);
       setTradeoffMatrixSuccessMessage(
         payload.replaced_existing
           ? "Generated tradeoff matrix and replaced the previous version."
@@ -636,6 +748,128 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     }
   }
 
+  async function generateAdversarialReview() {
+    if (!activeDecisionId || !canGenerateAdversarialReview) {
+      return;
+    }
+
+    setIsGeneratingAdversarialReview(true);
+    setAdversarialReviewErrorMessage(null);
+    setAdversarialReviewSuccessMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/adversarial-review/generate`),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            replace_existing: true,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        let detail = `Failed to generate adversarial review (${response.status})`;
+
+        try {
+          const payload = (await response.json()) as { detail?: string };
+          if (payload.detail) {
+            detail = payload.detail;
+          }
+        } catch {
+          // Fall back to generic status error.
+        }
+
+        throw new Error(detail);
+      }
+
+      const payload = (await response.json()) as {
+        replaced_existing: boolean;
+        review: AdversarialReview;
+      };
+      setAdversarialReview(payload.review);
+      setRecommendationMemo(null);
+      setRecommendationMemoSuccessMessage(null);
+      setAdversarialReviewSuccessMessage(
+        payload.replaced_existing
+          ? "Generated adversarial review and replaced the previous version."
+          : "Generated adversarial review.",
+      );
+      await loadDecisions(activeDecisionId);
+    } catch (error) {
+      setAdversarialReviewErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate adversarial review.",
+      );
+    } finally {
+      setIsGeneratingAdversarialReview(false);
+    }
+  }
+
+  async function generateRecommendationMemo() {
+    if (!activeDecisionId || !canGenerateRecommendationMemo) {
+      return;
+    }
+
+    setIsGeneratingRecommendationMemo(true);
+    setRecommendationMemoErrorMessage(null);
+    setRecommendationMemoSuccessMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/recommendation-memo/generate`),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            replace_existing: true,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        let detail = `Failed to generate recommendation memo (${response.status})`;
+
+        try {
+          const payload = (await response.json()) as { detail?: string };
+          if (payload.detail) {
+            detail = payload.detail;
+          }
+        } catch {
+          // Fall back to generic status error.
+        }
+
+        throw new Error(detail);
+      }
+
+      const payload = (await response.json()) as {
+        replaced_existing: boolean;
+        memo: RecommendationMemo;
+      };
+      setRecommendationMemo(payload.memo);
+      setRecommendationMemoSuccessMessage(
+        payload.replaced_existing
+          ? "Generated recommendation memo and replaced the previous version."
+          : "Generated recommendation memo.",
+      );
+      await loadDecisions(activeDecisionId);
+    } catch (error) {
+      setRecommendationMemoErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate recommendation memo.",
+      );
+    } finally {
+      setIsGeneratingRecommendationMemo(false);
+    }
+  }
+
   return {
     decisions,
     options,
@@ -643,6 +877,8 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     assumptions,
     selectedAssumptionIds,
     tradeoffMatrix,
+    adversarialReview,
+    recommendationMemo,
     activeDecisionId,
     activeDecision,
     optionMap,
@@ -655,21 +891,31 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     isLoadingCriteria,
     isLoadingAssumptions,
     isLoadingTradeoffMatrix,
+    isLoadingAdversarialReview,
+    isLoadingRecommendationMemo,
     isSubmittingDecision,
     isSubmittingOption,
     isSubmittingCriterion,
     isGeneratingAssumptions,
     isGeneratingTradeoffMatrix,
+    isGeneratingAdversarialReview,
+    isGeneratingRecommendationMemo,
     decisionErrorMessage,
     optionErrorMessage,
     criterionErrorMessage,
     assumptionErrorMessage,
     tradeoffMatrixErrorMessage,
+    adversarialReviewErrorMessage,
+    recommendationMemoErrorMessage,
     assumptionSuccessMessage,
     tradeoffMatrixSuccessMessage,
+    adversarialReviewSuccessMessage,
+    recommendationMemoSuccessMessage,
     canGenerateAssumptions,
     canRegenerateSelectedAssumptions,
     canGenerateTradeoffMatrix,
+    canGenerateAdversarialReview,
+    canGenerateRecommendationMemo,
     showDecisionBrief,
     showDecisionQuestion,
     setActiveDecisionId,
@@ -689,5 +935,7 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     selectAllAssumptions,
     clearAssumptionSelection,
     generateTradeoffMatrix,
+    generateAdversarialReview,
+    generateRecommendationMemo,
   };
 }

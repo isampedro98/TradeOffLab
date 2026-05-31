@@ -302,7 +302,7 @@ The repository now includes a first runnable scaffold:
 - `apps/api`: FastAPI service with persisted `Decision` CRUD and bootstrap seeding
 - `packages/*`: reserved package boundaries for schemas, prompts, core logic, and shared UI
 - `examples/erp-adoption`: first example input for the MVP dossier flow
-- `docker-compose.yml`: local `web` + `api` + `postgres` + `litellm` runtime
+- `docker-compose.yml`: local `web` + `api` + `postgres` + `litellm` runtime using the stable official LiteLLM image
 - `docker-compose.lite.yml`: optional lightweight override for local development
 - `docker/litellm/config.yaml`: local LiteLLM proxy model mapping
 - `docker/litellm/Dockerfile`: local slim LiteLLM image build
@@ -318,14 +318,20 @@ The repository now includes a first runnable scaffold:
 5. Check the API at `http://localhost:8000/api/v1/health`
 6. Check the LiteLLM proxy at `http://localhost:4000`
 
+The default stack uses the official stable LiteLLM image:
+
+```bash
+docker compose up --build
+```
+
 For a lighter local stack, use the compose override:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.lite.yml up --build
 ```
 
-The lite override keeps the same topology but replaces the upstream LiteLLM
-image with a local slim build.
+The lite override keeps the same topology but replaces the official stable
+LiteLLM image with a local slim build.
 
 Useful API paths in the current build:
 

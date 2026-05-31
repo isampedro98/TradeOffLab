@@ -100,6 +100,57 @@ export type TradeoffMatrix = {
   assessments: TradeoffAssessment[];
 };
 
+export type AdversarialReviewSeverity = "low" | "medium" | "high";
+
+export type AdversarialReviewFinding = {
+  id: string;
+  review_id: string;
+  title: string;
+  severity: AdversarialReviewSeverity;
+  critique: string;
+  consequence: string;
+  mitigation_test: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdversarialReview = {
+  id: string;
+  decision_id: string;
+  summary: string;
+  overall_risk: AdversarialReviewSeverity;
+  provider: string;
+  model: string;
+  created_at: string;
+  updated_at: string;
+  findings: AdversarialReviewFinding[];
+};
+
+export type RecommendationConfidence = "low" | "medium" | "high";
+
+export type RecommendationCondition = {
+  id: string;
+  memo_id: string;
+  position: number;
+  statement: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RecommendationMemo = {
+  id: string;
+  decision_id: string;
+  recommended_option_id: string;
+  fallback_option_id: string | null;
+  rationale: string;
+  confidence: RecommendationConfidence;
+  provider: string;
+  model: string;
+  created_at: string;
+  updated_at: string;
+  conditions: RecommendationCondition[];
+};
+
 export type CreateDecisionPayload = {
   title: string;
   decision_brief: string;
@@ -169,6 +220,16 @@ export function confidenceLabel(confidence: Assumption["confidence"]): string {
   return confidence.charAt(0).toUpperCase() + confidence.slice(1);
 }
 
+export function severityLabel(severity: AdversarialReviewSeverity): string {
+  return severity.charAt(0).toUpperCase() + severity.slice(1);
+}
+
+export function recommendationConfidenceLabel(
+  confidence: RecommendationConfidence,
+): string {
+  return confidence.charAt(0).toUpperCase() + confidence.slice(1);
+}
+
 export function normalizeText(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -193,6 +254,8 @@ export type DecisionWorkspaceController = {
   assumptions: Assumption[];
   selectedAssumptionIds: string[];
   tradeoffMatrix: TradeoffMatrix | null;
+  adversarialReview: AdversarialReview | null;
+  recommendationMemo: RecommendationMemo | null;
   activeDecisionId: string | null;
   activeDecision: Decision | null;
   optionMap: Map<string, OptionRecord>;
@@ -205,21 +268,31 @@ export type DecisionWorkspaceController = {
   isLoadingCriteria: boolean;
   isLoadingAssumptions: boolean;
   isLoadingTradeoffMatrix: boolean;
+  isLoadingAdversarialReview: boolean;
+  isLoadingRecommendationMemo: boolean;
   isSubmittingDecision: boolean;
   isSubmittingOption: boolean;
   isSubmittingCriterion: boolean;
   isGeneratingAssumptions: boolean;
   isGeneratingTradeoffMatrix: boolean;
+  isGeneratingAdversarialReview: boolean;
+  isGeneratingRecommendationMemo: boolean;
   decisionErrorMessage: string | null;
   optionErrorMessage: string | null;
   criterionErrorMessage: string | null;
   assumptionErrorMessage: string | null;
   tradeoffMatrixErrorMessage: string | null;
+  adversarialReviewErrorMessage: string | null;
+  recommendationMemoErrorMessage: string | null;
   assumptionSuccessMessage: string | null;
   tradeoffMatrixSuccessMessage: string | null;
+  adversarialReviewSuccessMessage: string | null;
+  recommendationMemoSuccessMessage: string | null;
   canGenerateAssumptions: boolean;
   canRegenerateSelectedAssumptions: boolean;
   canGenerateTradeoffMatrix: boolean;
+  canGenerateAdversarialReview: boolean;
+  canGenerateRecommendationMemo: boolean;
   showDecisionBrief: boolean;
   showDecisionQuestion: boolean;
   setActiveDecisionId: Dispatch<SetStateAction<string | null>>;
@@ -239,4 +312,6 @@ export type DecisionWorkspaceController = {
   selectAllAssumptions: () => void;
   clearAssumptionSelection: () => void;
   generateTradeoffMatrix: () => Promise<void>;
+  generateAdversarialReview: () => Promise<void>;
+  generateRecommendationMemo: () => Promise<void>;
 };

@@ -1,0 +1,175 @@
+import json
+
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy.orm import Session
+
+from app.domain.adversarial_review import AdversarialReview
+from app.domain.assumption import Assumption
+from app.domain.criterion import Criterion
+from app.domain.decision import Decision
+from app.domain.option import Option
+from app.domain.recommendation_memo import (
+    RecommendationConditionCreate,
+    RecommendationConfidence,
+    RecommendationMemo,
+    RecommendationMemoReplace,
+)
+from app.domain.tradeoff_matrix import TradeoffMatrix
+from app.persistence.adversarial_review_repository import AdversarialReviewRepository
+from app.persistence.assumption_repository import AssumptionRepository
+from app.persistence.criterion_repository import CriterionRepository
+from app.persistence.decision_repository import DecisionRepository
+from app.persistence.option_repository import OptionRepository
+from app.persistence.recommendation_memo_repository import RecommendationMemoRepository
+from app.persistence.tradeoff_matrix_repository import TradeoffMatrixRepository
+from app.services.litellm_client import LiteLLMClient
+
+
+class RecommendationMemoGenerationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    replace_existing: bool = True
+
+
+class GeneratedRecommendationMemoPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    recommended_option_id: str
+    fallback_option_id: str | None = None
+    rationale: str
+    confidence: RecommendationConfidence
+    conditions: list[RecommendationConditionCreate]
+
+
+class RecommendationMemoGenerationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    replaced_existing: bool
+    memo: RecommendationMemo
+
+
+class RecommendationMemoGenerationService:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        client: LiteLLMClient | None = None,
+    ) -> None:
+        self.session = session
+        self.client = client or LiteLLMClient()
+        self.adversarial_review_repository = AdversarialReviewRepository(session)
+        self.assumption_repository = AssumptionRepository(session)
+        self.criterion_repository = CriterionRepository(session)
+        self.decision_repository = DecisionRepository(session)
+        self.option_repository = OptionRepository(session)
+        self.recommendation_memo_repository = RecommendationMemoRepository(session)
+        self.tradeoff_matrix_repository = TradeoffMatrixRepository(session)
+
+    def generate_for_decision(
+        self,
+        decision_id: str,
+        request: RecommendationMemoGenerationRequest,
+    ) -> RecommendationMemoGenerationResponse:
+        decision = self.decision_repository.get(decision_id)
+        if decision is None:
+            raise ValueError(f"Decision '{decision_id}' was not found.")
+
+        options = self.option_repository.list_for_decision(decision_id)
+        criteria = self.criterion_repository.list_for_decision(decision_id)
+        assumptions = self.assumption_repository.list_for_decision(decision_id)
+        tradeoff_matrix = self.tradeoff_matrix_repository.get_for_decision(decision_id)
+        adversarial_review = self.adversarial_review_repository.get_for_decision(decision_id)
+
+        if not options:
+            raise ValueError("Recommendation generation requires at least one option.")
+        if not criteria:
+            raise ValueError("Recommendation generation requires at least one criterion.")
+        if not assumptions:
+            raise ValueError("Recommendation generation requires at least one assumption.")
+        if tradeoff_matrix is None:
+            raise ValueError("Recommendation generation requires a tradeoff matrix.")
+        if adversarial_review is None:
+            raise ValueError("Recommendation generation requires an adversarial review.")
+
+        existing_memo = self.recommendation_memo_repository.get_for_decision(decision_id)
+        generated = self._generate_payload(
+            decision=decision,
+            options=options,
+            criteria=criteria,
+            assumptions=assumptions,
+            tradeoff_matrix=tradeoff_matrix,
+            adversarial_review=adversarial_review,
+        )
+
+        option_ids = {option.id for option in options}
+        if generated.recommended_option_id not in option_ids:
+            raise ValueError("Recommendation memo selected an unknown recommended option.")
+        if (
+            generated.fallback_option_id is not None
+            and generated.fallback_option_id not in option_ids
+        ):
+            raise ValueError("Recommendation memo selected an unknown fallback option.")
+        if generated.fallback_option_id == generated.recommended_option_id:
+            raise ValueError("Fallback option must differ from the recommended option.")
+
+        memo = self.recommendation_memo_repository.replace_for_decision(
+            decision_id,
+            RecommendationMemoReplace(
+                recommended_option_id=generated.recommended_option_id,
+                fallback_option_id=generated.fallback_option_id,
+                rationale=generated.rationale,
+                confidence=generated.confidence,
+                provider="litellm",
+                model=self.client.model,
+                conditions=generated.conditions,
+            ),
+        )
+        return RecommendationMemoGenerationResponse(
+            replaced_existing=existing_memo is not None,
+            memo=memo,
+        )
+
+    def _generate_payload(
+        self,
+        *,
+        decision: Decision,
+        options: list[Option],
+        criteria: list[Criterion],
+        assumptions: list[Assumption],
+        tradeoff_matrix: TradeoffMatrix,
+        adversarial_review: AdversarialReview,
+    ) -> GeneratedRecommendationMemoPayload:
+        decision_snapshot = {
+            "decision": decision.model_dump(mode="json"),
+            "options": [option.model_dump(mode="json") for option in options],
+            "criteria": [criterion.model_dump(mode="json") for criterion in criteria],
+            "assumptions": [assumption.model_dump(mode="json") for assumption in assumptions],
+            "tradeoff_matrix": tradeoff_matrix.model_dump(mode="json"),
+            "adversarial_review": adversarial_review.model_dump(mode="json"),
+        }
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are generating a structured recommendation memo for TradeOffLab. "
+                    "Choose one recommended option, optionally one fallback option, explain the rationale, "
+                    "and state the conditions under which the recommendation should hold. "
+                    "Use the adversarial review to temper confidence and conditions. "
+                    "Return only valid JSON."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    "Generate a recommendation memo for this decision. "
+                    "Prefer concrete conditions and make the rationale traceable to the current decision state.\n\n"
+                    f"{json.dumps(decision_snapshot, indent=2)}"
+                ),
+            },
+        ]
+
+        return self.client.generate_structured(
+            messages=messages,
+            response_model=GeneratedRecommendationMemoPayload,
+        )

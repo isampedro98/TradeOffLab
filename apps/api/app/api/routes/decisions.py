@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db_session
+from app.domain.adversarial_review import AdversarialReview
 from app.domain.assumption import (
     Assumption,
     AssumptionCreate,
@@ -16,18 +17,31 @@ from app.domain.criterion import (
 )
 from app.domain.decision import Decision, DecisionCreate, DecisionUpdate, build_bootstrap_decision
 from app.domain.option import Option, OptionCreate, OptionUpdate, build_bootstrap_options
+from app.domain.recommendation_memo import RecommendationMemo
 from app.domain.tradeoff_matrix import TradeoffMatrix
 from app.persistence.assumption_repository import AssumptionRepository
+from app.persistence.adversarial_review_repository import AdversarialReviewRepository
 from app.persistence.criterion_repository import CriterionRepository
 from app.persistence.decision_repository import DecisionRepository
 from app.persistence.option_repository import OptionRepository
+from app.persistence.recommendation_memo_repository import RecommendationMemoRepository
 from app.persistence.tradeoff_matrix_repository import TradeoffMatrixRepository
 from app.services.assumption_generation import (
     AssumptionGenerationRequest,
     AssumptionGenerationResponse,
     AssumptionGenerationService,
 )
+from app.services.adversarial_review_generation import (
+    AdversarialReviewGenerationRequest,
+    AdversarialReviewGenerationResponse,
+    AdversarialReviewGenerationService,
+)
 from app.services.litellm_client import LiteLLMError
+from app.services.recommendation_memo_generation import (
+    RecommendationMemoGenerationRequest,
+    RecommendationMemoGenerationResponse,
+    RecommendationMemoGenerationService,
+)
 from app.services.tradeoff_matrix_generation import (
     TradeoffMatrixGenerationRequest,
     TradeoffMatrixGenerationResponse,
@@ -347,6 +361,110 @@ def generate_decision_tradeoff_matrix(
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Tradeoff matrix generation failed: {error}",
+        ) from error
+
+
+@router.get("/{decision_id}/adversarial-review", response_model=AdversarialReview)
+def get_decision_adversarial_review(
+    decision_id: str,
+    session: Session = Depends(get_db_session),
+) -> AdversarialReview:
+    require_decision(session, decision_id)
+    repository = AdversarialReviewRepository(session)
+    review = repository.get_for_decision(decision_id)
+    if review is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Adversarial review was not found for decision '{decision_id}'.",
+        )
+    return review
+
+
+@router.get("/{decision_id}/recommendation-memo", response_model=RecommendationMemo)
+def get_decision_recommendation_memo(
+    decision_id: str,
+    session: Session = Depends(get_db_session),
+) -> RecommendationMemo:
+    require_decision(session, decision_id)
+    repository = RecommendationMemoRepository(session)
+    memo = repository.get_for_decision(decision_id)
+    if memo is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Recommendation memo was not found for decision '{decision_id}'.",
+        )
+    return memo
+
+
+@router.post(
+    "/{decision_id}/adversarial-review/generate",
+    response_model=AdversarialReviewGenerationResponse,
+)
+def generate_decision_adversarial_review(
+    decision_id: str,
+    payload: AdversarialReviewGenerationRequest,
+    session: Session = Depends(get_db_session),
+) -> AdversarialReviewGenerationResponse:
+    require_decision(session, decision_id)
+    service = AdversarialReviewGenerationService(session)
+    try:
+        return service.generate_for_decision(decision_id, payload)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
+    except LiteLLMError as error:
+        detail = str(error)
+        if error.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            detail = (
+                "The configured AI provider is rate-limiting this workspace right now. "
+                "Retry later or check the Gemini quota behind LiteLLM."
+            )
+        raise HTTPException(
+            status_code=error.status_code,
+            detail=detail,
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Adversarial review generation failed: {error}",
+        ) from error
+
+
+@router.post(
+    "/{decision_id}/recommendation-memo/generate",
+    response_model=RecommendationMemoGenerationResponse,
+)
+def generate_decision_recommendation_memo(
+    decision_id: str,
+    payload: RecommendationMemoGenerationRequest,
+    session: Session = Depends(get_db_session),
+) -> RecommendationMemoGenerationResponse:
+    require_decision(session, decision_id)
+    service = RecommendationMemoGenerationService(session)
+    try:
+        return service.generate_for_decision(decision_id, payload)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
+    except LiteLLMError as error:
+        detail = str(error)
+        if error.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            detail = (
+                "The configured AI provider is rate-limiting this workspace right now. "
+                "Retry later or check the Gemini quota behind LiteLLM."
+            )
+        raise HTTPException(
+            status_code=error.status_code,
+            detail=detail,
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Recommendation memo generation failed: {error}",
         ) from error
 
 
