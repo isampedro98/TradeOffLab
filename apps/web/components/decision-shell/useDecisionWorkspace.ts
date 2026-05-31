@@ -6,16 +6,19 @@ import {
   apiUrl,
   initialCriterionDraft,
   initialDecisionDraft,
+  initialEvidenceDraft,
   initialOptionDraft,
   normalizeText,
   type Assumption,
   type AdversarialReview,
   type CreateCriterionPayload,
   type CreateDecisionPayload,
+  type CreateEvidencePayload,
   type CreateOptionPayload,
   type CriterionRecord,
   type Decision,
   type DecisionWorkspaceController,
+  type EvidenceRecord,
   type OptionRecord,
   type RecommendationMemo,
   type TradeoffMatrix,
@@ -27,6 +30,7 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
   const [options, setOptions] = useState<OptionRecord[]>([]);
   const [criteria, setCriteria] = useState<CriterionRecord[]>([]);
   const [assumptions, setAssumptions] = useState<Assumption[]>([]);
+  const [evidence, setEvidence] = useState<EvidenceRecord[]>([]);
   const [selectedAssumptionIds, setSelectedAssumptionIds] = useState<string[]>(
     [],
   );
@@ -46,11 +50,14 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     useState<CreateOptionPayload>(initialOptionDraft);
   const [criterionDraft, setCriterionDraft] =
     useState<CreateCriterionPayload>(initialCriterionDraft);
+  const [evidenceDraft, setEvidenceDraft] =
+    useState<CreateEvidencePayload>(initialEvidenceDraft);
   const [isCreateDecisionOpen, setIsCreateDecisionOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isLoadingCriteria, setIsLoadingCriteria] = useState(false);
   const [isLoadingAssumptions, setIsLoadingAssumptions] = useState(false);
+  const [isLoadingEvidence, setIsLoadingEvidence] = useState(false);
   const [isLoadingTradeoffMatrix, setIsLoadingTradeoffMatrix] = useState(false);
   const [isLoadingAdversarialReview, setIsLoadingAdversarialReview] =
     useState(false);
@@ -59,6 +66,7 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [isSubmittingOption, setIsSubmittingOption] = useState(false);
   const [isSubmittingCriterion, setIsSubmittingCriterion] = useState(false);
+  const [isSubmittingEvidence, setIsSubmittingEvidence] = useState(false);
   const [isGeneratingAssumptions, setIsGeneratingAssumptions] = useState(false);
   const [isGeneratingTradeoffMatrix, setIsGeneratingTradeoffMatrix] =
     useState(false);
@@ -75,6 +83,9 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     null,
   );
   const [criterionErrorMessage, setCriterionErrorMessage] = useState<
+    string | null
+  >(null);
+  const [evidenceErrorMessage, setEvidenceErrorMessage] = useState<
     string | null
   >(null);
   const [assumptionErrorMessage, setAssumptionErrorMessage] = useState<
@@ -191,12 +202,14 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
       setOptions([]);
       setCriteria([]);
       setAssumptions([]);
+      setEvidence([]);
       setSelectedAssumptionIds([]);
       setTradeoffMatrix(null);
       setAdversarialReview(null);
       setRecommendationMemo(null);
       setOptionErrorMessage(null);
       setCriterionErrorMessage(null);
+      setEvidenceErrorMessage(null);
       setAssumptionErrorMessage(null);
       setTradeoffMatrixErrorMessage(null);
       setAdversarialReviewErrorMessage(null);
@@ -210,6 +223,7 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
       loadOptions(activeDecisionId),
       loadCriteria(activeDecisionId),
       loadAssumptions(activeDecisionId),
+      loadEvidence(activeDecisionId),
       loadTradeoffMatrix(activeDecisionId),
       loadAdversarialReview(activeDecisionId),
       loadRecommendationMemo(activeDecisionId),
@@ -297,6 +311,31 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
       );
     } finally {
       setIsLoadingAssumptions(false);
+    }
+  }
+
+  async function loadEvidence(decisionId: string) {
+    setIsLoadingEvidence(true);
+    setEvidenceErrorMessage(null);
+
+    try {
+      const response = await fetch(apiUrl(`/api/v1/decisions/${decisionId}/evidence`), {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load evidence (${response.status})`);
+      }
+
+      const payload = (await response.json()) as EvidenceRecord[];
+      setEvidence(payload);
+    } catch (error) {
+      setEvidence([]);
+      setEvidenceErrorMessage(
+        error instanceof Error ? error.message : "Failed to load evidence.",
+      );
+    } finally {
+      setIsLoadingEvidence(false);
     }
   }
 
@@ -584,6 +623,43 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     }
   }
 
+  async function createEvidence() {
+    if (!activeDecisionId) {
+      return;
+    }
+
+    setIsSubmittingEvidence(true);
+    setEvidenceErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/evidence`),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(evidenceDraft),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to create evidence (${response.status})`);
+      }
+
+      setEvidenceDraft(initialEvidenceDraft);
+      await loadEvidence(activeDecisionId);
+      await loadDecisions(activeDecisionId);
+    } catch (error) {
+      setIsSubmittingEvidence(false);
+      setEvidenceErrorMessage(
+        error instanceof Error ? error.message : "Failed to create evidence.",
+      );
+    } finally {
+      setIsSubmittingEvidence(false);
+    }
+  }
+
   async function deleteCriterion(criterionId: string) {
     if (!activeDecisionId) {
       return;
@@ -608,6 +684,34 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     } catch (error) {
       setCriterionErrorMessage(
         error instanceof Error ? error.message : "Failed to delete criterion.",
+      );
+    }
+  }
+
+  async function deleteEvidence(evidenceId: string) {
+    if (!activeDecisionId) {
+      return;
+    }
+
+    setEvidenceErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/evidence/${evidenceId}`),
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete evidence (${response.status})`);
+      }
+
+      await loadEvidence(activeDecisionId);
+      await loadDecisions(activeDecisionId);
+    } catch (error) {
+      setEvidenceErrorMessage(
+        error instanceof Error ? error.message : "Failed to delete evidence.",
       );
     }
   }
@@ -960,6 +1064,7 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     options,
     criteria,
     assumptions,
+    evidence,
     selectedAssumptionIds,
     tradeoffMatrix,
     adversarialReview,
@@ -971,17 +1076,20 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     decisionDraft,
     optionDraft,
     criterionDraft,
+    evidenceDraft,
     isCreateDecisionOpen,
     isLoading,
     isLoadingOptions,
     isLoadingCriteria,
     isLoadingAssumptions,
+    isLoadingEvidence,
     isLoadingTradeoffMatrix,
     isLoadingAdversarialReview,
     isLoadingRecommendationMemo,
     isSubmittingDecision,
     isSubmittingOption,
     isSubmittingCriterion,
+    isSubmittingEvidence,
     isGeneratingAssumptions,
     isGeneratingTradeoffMatrix,
     isGeneratingAdversarialReview,
@@ -991,6 +1099,7 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     decisionErrorMessage,
     optionErrorMessage,
     criterionErrorMessage,
+    evidenceErrorMessage,
     assumptionErrorMessage,
     tradeoffMatrixErrorMessage,
     adversarialReviewErrorMessage,
@@ -1013,6 +1122,7 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     setDecisionDraft,
     setOptionDraft,
     setCriterionDraft,
+    setEvidenceDraft,
     openCreateDecisionModal,
     closeCreateDecisionModal,
     createDecision,
@@ -1021,6 +1131,8 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     deleteOption,
     createCriterion,
     deleteCriterion,
+    createEvidence,
+    deleteEvidence,
     generateAssumptions,
     toggleAssumptionSelection,
     selectAllAssumptions,

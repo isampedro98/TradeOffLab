@@ -17,6 +17,7 @@ from app.domain.criterion import (
     build_bootstrap_criteria,
 )
 from app.domain.decision import Decision, DecisionCreate, DecisionUpdate, build_bootstrap_decision
+from app.domain.evidence import Evidence, EvidenceCreate, EvidenceUpdate, build_bootstrap_evidence
 from app.domain.option import Option, OptionCreate, OptionUpdate, build_bootstrap_options
 from app.domain.recommendation_memo import RecommendationMemo
 from app.domain.tradeoff_matrix import TradeoffMatrix
@@ -24,6 +25,7 @@ from app.persistence.assumption_repository import AssumptionRepository
 from app.persistence.adversarial_review_repository import AdversarialReviewRepository
 from app.persistence.criterion_repository import CriterionRepository
 from app.persistence.decision_repository import DecisionRepository
+from app.persistence.evidence_repository import EvidenceRepository
 from app.persistence.option_repository import OptionRepository
 from app.persistence.recommendation_memo_repository import RecommendationMemoRepository
 from app.persistence.tradeoff_matrix_repository import TradeoffMatrixRepository
@@ -160,6 +162,7 @@ def seed_bootstrap_example(session: Session = Depends(get_db_session)) -> Decisi
     assumption_repository = AssumptionRepository(session)
     criterion_repository = CriterionRepository(session)
     decision_repository = DecisionRepository(session)
+    evidence_repository = EvidenceRepository(session)
     option_repository = OptionRepository(session)
 
     decision = decision_repository.create_if_missing(build_bootstrap_decision())
@@ -169,7 +172,85 @@ def seed_bootstrap_example(session: Session = Depends(get_db_session)) -> Decisi
         criterion_repository.create_if_missing(criterion)
     for assumption in build_bootstrap_assumptions(decision.id):
         assumption_repository.create_if_missing(assumption)
+    for evidence in build_bootstrap_evidence(decision.id):
+        evidence_repository.create_if_missing(evidence)
     return decision
+
+
+@router.get("/{decision_id}/evidence", response_model=list[Evidence])
+def list_decision_evidence(
+    decision_id: str,
+    session: Session = Depends(get_db_session),
+) -> list[Evidence]:
+    require_decision(session, decision_id)
+    repository = EvidenceRepository(session)
+    return repository.list_for_decision(decision_id)
+
+
+@router.post(
+    "/{decision_id}/evidence",
+    response_model=Evidence,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_decision_evidence(
+    decision_id: str,
+    payload: EvidenceCreate,
+    session: Session = Depends(get_db_session),
+) -> Evidence:
+    require_decision(session, decision_id)
+    repository = EvidenceRepository(session)
+    return repository.create(decision_id, payload)
+
+
+@router.get("/{decision_id}/evidence/{evidence_id}", response_model=Evidence)
+def get_decision_evidence(
+    decision_id: str,
+    evidence_id: str,
+    session: Session = Depends(get_db_session),
+) -> Evidence:
+    require_decision(session, decision_id)
+    repository = EvidenceRepository(session)
+    evidence = repository.get_for_decision(decision_id, evidence_id)
+    if evidence is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Evidence '{evidence_id}' was not found for decision '{decision_id}'.",
+        )
+    return evidence
+
+
+@router.patch("/{decision_id}/evidence/{evidence_id}", response_model=Evidence)
+def update_decision_evidence(
+    decision_id: str,
+    evidence_id: str,
+    payload: EvidenceUpdate,
+    session: Session = Depends(get_db_session),
+) -> Evidence:
+    require_decision(session, decision_id)
+    repository = EvidenceRepository(session)
+    evidence = repository.update(decision_id, evidence_id, payload)
+    if evidence is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Evidence '{evidence_id}' was not found for decision '{decision_id}'.",
+        )
+    return evidence
+
+
+@router.delete("/{decision_id}/evidence/{evidence_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_decision_evidence(
+    decision_id: str,
+    evidence_id: str,
+    session: Session = Depends(get_db_session),
+) -> None:
+    require_decision(session, decision_id)
+    repository = EvidenceRepository(session)
+    deleted = repository.delete(decision_id, evidence_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Evidence '{evidence_id}' was not found for decision '{decision_id}'.",
+        )
 
 
 @router.get("/{decision_id}/options", response_model=list[Option])

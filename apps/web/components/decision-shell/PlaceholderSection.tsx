@@ -2,19 +2,14 @@ import type { DecisionWorkspaceController, WorkspaceSection } from "./model";
 
 type Props = {
   controller: DecisionWorkspaceController;
-  section: Exclude<WorkspaceSection, "Overview" | "Options" | "Criteria" | "Assumptions" | "Tradeoffs" | "Adversarial Review" | "Recommendation">;
+  section: Exclude<WorkspaceSection, "Overview" | "Options" | "Criteria" | "Assumptions" | "Evidence" | "Tradeoffs" | "Adversarial Review" | "Recommendation">;
 };
 
 const copyBySection: Record<Props["section"], { title: string; description: string }> = {
-  Evidence: {
-    title: "Evidence register",
-    description:
-      "This section is reserved for source-backed evidence, claims, and validation artifacts. The MVP data model is not wired yet.",
-  },
   Export: {
     title: "Decision export",
     description:
-      "Markdown and JSON export are the next closing step for the MVP. The workflow artifacts are now ready to feed that output.",
+      "This section is reserved for supplementary export and handoff actions beyond the current MVP dossier downloads.",
   },
 };
 
@@ -40,9 +35,8 @@ export function PlaceholderSection({ controller, section }: Props) {
       </div>
 
       <div className="mt-6 rounded-2xl border border-dashed border-black/15 px-4 py-5 text-sm text-ink/65">
-        {section === "Export"
-          ? "Export is intentionally deferred until the recommendation flow is stable."
-          : "Evidence is intentionally deferred until the MVP synthesis flow is complete."}
+        Export beyond the current dossier downloads is intentionally deferred
+        until the MVP synthesis flow settles.
       </div>
     </section>
   );

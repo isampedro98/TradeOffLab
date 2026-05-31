@@ -3,6 +3,7 @@
 import { AdversarialReviewSection } from "./decision-shell/AdversarialReviewSection";
 import { AssumptionsSection } from "./decision-shell/AssumptionsSection";
 import { CriteriaSection } from "./decision-shell/CriteriaSection";
+import { EvidenceSection } from "./decision-shell/EvidenceSection";
 import { ExportSection } from "./decision-shell/ExportSection";
 import { NewDecisionModal } from "./decision-shell/NewDecisionModal";
 import { OptionsSection } from "./decision-shell/OptionsSection";
@@ -43,6 +44,8 @@ function ActiveSection({ controller }: { controller: ReturnType<typeof useDecisi
       return <OptionsSection controller={controller} />;
     case "Criteria":
       return <CriteriaSection controller={controller} />;
+    case "Evidence":
+      return <EvidenceSection controller={controller} />;
     case "Assumptions":
       return <AssumptionsSection controller={controller} />;
     case "Tradeoffs":
@@ -53,9 +56,7 @@ function ActiveSection({ controller }: { controller: ReturnType<typeof useDecisi
       return <RecommendationSection controller={controller} />;
     case "Export":
       return <ExportSection controller={controller} />;
-    case "Evidence":
-      return <PlaceholderSection controller={controller} section={controller.activeSection} />;
     default:
-      return <WorkspaceOverview controller={controller} />;
+      return <PlaceholderSection controller={controller} section="Export" />;
   }
 }

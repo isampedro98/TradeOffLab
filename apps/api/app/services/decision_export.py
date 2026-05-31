@@ -5,6 +5,7 @@ from app.domain.adversarial_review import AdversarialReview
 from app.domain.assumption import Assumption
 from app.domain.criterion import Criterion
 from app.domain.decision import Decision
+from app.domain.evidence import Evidence
 from app.domain.option import Option
 from app.domain.recommendation_memo import RecommendationMemo
 from app.domain.tradeoff_matrix import TradeoffMatrix
@@ -12,18 +13,10 @@ from app.persistence.adversarial_review_repository import AdversarialReviewRepos
 from app.persistence.assumption_repository import AssumptionRepository
 from app.persistence.criterion_repository import CriterionRepository
 from app.persistence.decision_repository import DecisionRepository
+from app.persistence.evidence_repository import EvidenceRepository
 from app.persistence.option_repository import OptionRepository
 from app.persistence.recommendation_memo_repository import RecommendationMemoRepository
 from app.persistence.tradeoff_matrix_repository import TradeoffMatrixRepository
-
-
-class EvidenceExportRecord(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    id: str
-    title: str
-    summary: str
-    source: str
 
 
 class DecisionDossierExport(BaseModel):
@@ -33,7 +26,7 @@ class DecisionDossierExport(BaseModel):
     options: list[Option]
     criteria: list[Criterion]
     assumptions: list[Assumption]
-    evidence: list[EvidenceExportRecord] = Field(default_factory=list)
+    evidence: list[Evidence] = Field(default_factory=list)
     tradeoff_matrix: TradeoffMatrix | None = None
     adversarial_review: AdversarialReview | None = None
     recommendation_memo: RecommendationMemo | None = None
@@ -46,6 +39,7 @@ class DecisionExportService:
         self.assumption_repository = AssumptionRepository(session)
         self.criterion_repository = CriterionRepository(session)
         self.decision_repository = DecisionRepository(session)
+        self.evidence_repository = EvidenceRepository(session)
         self.option_repository = OptionRepository(session)
         self.recommendation_memo_repository = RecommendationMemoRepository(session)
         self.tradeoff_matrix_repository = TradeoffMatrixRepository(session)
@@ -60,7 +54,7 @@ class DecisionExportService:
             options=self.option_repository.list_for_decision(decision_id),
             criteria=self.criterion_repository.list_for_decision(decision_id),
             assumptions=self.assumption_repository.list_for_decision(decision_id),
-            evidence=[],
+            evidence=self.evidence_repository.list_for_decision(decision_id),
             tradeoff_matrix=self.tradeoff_matrix_repository.get_for_decision(decision_id),
             adversarial_review=self.adversarial_review_repository.get_for_decision(decision_id),
             recommendation_memo=self.recommendation_memo_repository.get_for_decision(
@@ -159,7 +153,7 @@ class DecisionExportService:
         else:
             lines.extend(
                 [
-                    "_Evidence is not wired yet in the MVP data model. The dossier preserves this section so the workflow does not forget it._",
+                    "No evidence recorded yet.",
                     "",
                 ]
             )

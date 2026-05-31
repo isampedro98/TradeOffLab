@@ -79,6 +79,16 @@ export type Assumption = {
   updated_at: string;
 };
 
+export type EvidenceRecord = {
+  id: string;
+  decision_id: string;
+  title: string;
+  summary: string;
+  source: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type TradeoffAssessment = {
   id: string;
   matrix_id: string;
@@ -158,12 +168,7 @@ export type DecisionDossierExport = {
   options: OptionRecord[];
   criteria: CriterionRecord[];
   assumptions: Assumption[];
-  evidence: {
-    id: string;
-    title: string;
-    summary: string;
-    source: string;
-  }[];
+  evidence: EvidenceRecord[];
   tradeoff_matrix: TradeoffMatrix | null;
   adversarial_review: AdversarialReview | null;
   recommendation_memo: RecommendationMemo | null;
@@ -190,6 +195,12 @@ export type CreateCriterionPayload = {
   measurement_type: CriterionMeasurementType;
 };
 
+export type CreateEvidencePayload = {
+  title: string;
+  summary: string;
+  source: string;
+};
+
 export const initialDecisionDraft: CreateDecisionPayload = {
   title: "",
   decision_brief: "",
@@ -209,6 +220,12 @@ export const initialCriterionDraft: CreateCriterionPayload = {
   description: "",
   weight: "0.20",
   measurement_type: "qualitative",
+};
+
+export const initialEvidenceDraft: CreateEvidencePayload = {
+  title: "",
+  summary: "",
+  source: "",
 };
 
 export function apiUrl(path: string): string {
@@ -270,6 +287,7 @@ export type DecisionWorkspaceController = {
   options: OptionRecord[];
   criteria: CriterionRecord[];
   assumptions: Assumption[];
+  evidence: EvidenceRecord[];
   selectedAssumptionIds: string[];
   tradeoffMatrix: TradeoffMatrix | null;
   adversarialReview: AdversarialReview | null;
@@ -281,17 +299,20 @@ export type DecisionWorkspaceController = {
   decisionDraft: CreateDecisionPayload;
   optionDraft: CreateOptionPayload;
   criterionDraft: CreateCriterionPayload;
+  evidenceDraft: CreateEvidencePayload;
   isCreateDecisionOpen: boolean;
   isLoading: boolean;
   isLoadingOptions: boolean;
   isLoadingCriteria: boolean;
   isLoadingAssumptions: boolean;
+  isLoadingEvidence: boolean;
   isLoadingTradeoffMatrix: boolean;
   isLoadingAdversarialReview: boolean;
   isLoadingRecommendationMemo: boolean;
   isSubmittingDecision: boolean;
   isSubmittingOption: boolean;
   isSubmittingCriterion: boolean;
+  isSubmittingEvidence: boolean;
   isGeneratingAssumptions: boolean;
   isGeneratingTradeoffMatrix: boolean;
   isGeneratingAdversarialReview: boolean;
@@ -301,6 +322,7 @@ export type DecisionWorkspaceController = {
   decisionErrorMessage: string | null;
   optionErrorMessage: string | null;
   criterionErrorMessage: string | null;
+  evidenceErrorMessage: string | null;
   assumptionErrorMessage: string | null;
   tradeoffMatrixErrorMessage: string | null;
   adversarialReviewErrorMessage: string | null;
@@ -323,6 +345,7 @@ export type DecisionWorkspaceController = {
   setDecisionDraft: Dispatch<SetStateAction<CreateDecisionPayload>>;
   setOptionDraft: Dispatch<SetStateAction<CreateOptionPayload>>;
   setCriterionDraft: Dispatch<SetStateAction<CreateCriterionPayload>>;
+  setEvidenceDraft: Dispatch<SetStateAction<CreateEvidencePayload>>;
   openCreateDecisionModal: () => void;
   closeCreateDecisionModal: () => void;
   createDecision: () => Promise<void>;
@@ -331,6 +354,8 @@ export type DecisionWorkspaceController = {
   deleteOption: (optionId: string) => Promise<void>;
   createCriterion: () => Promise<void>;
   deleteCriterion: (criterionId: string) => Promise<void>;
+  createEvidence: () => Promise<void>;
+  deleteEvidence: (evidenceId: string) => Promise<void>;
   generateAssumptions: () => Promise<void>;
   toggleAssumptionSelection: (assumptionId: string) => void;
   selectAllAssumptions: () => void;

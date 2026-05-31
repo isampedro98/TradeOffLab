@@ -62,8 +62,10 @@ export function ExportSection({ controller }: Props) {
         />
         <StatCard
           label="Evidence"
-          value="0"
-          description="Reserved in the export schema even before the register exists."
+          value={
+            controller.activeDecision ? String(controller.evidence.length) : "..."
+          }
+          description="Source-backed records included in the dossier export."
         />
       </div>
 
@@ -82,8 +84,8 @@ export function ExportSection({ controller }: Props) {
       <div className="mt-6 rounded-2xl border border-dashed border-black/15 px-4 py-5 text-sm leading-7 text-ink/65">
         The export bundle includes `Decision`, `Options`, `Criteria`,
         `Assumptions`, `TradeoffMatrix`, `AdversarialReview`, and
-        `RecommendationMemo`. `Evidence` remains present as an explicit empty
-        list so the dossier format does not forget it.
+        `RecommendationMemo`. `Evidence` is included directly from the current
+        decision register.
       </div>
     </section>
   );
