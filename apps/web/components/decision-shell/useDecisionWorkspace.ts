@@ -52,6 +52,10 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     useState<CreateCriterionPayload>(initialCriterionDraft);
   const [evidenceDraft, setEvidenceDraft] =
     useState<CreateEvidencePayload>(initialEvidenceDraft);
+  const [criteriaGenerationCount, setCriteriaGenerationCount] = useState("5");
+  const [evidenceGenerationCount, setEvidenceGenerationCount] = useState("4");
+  const [evidenceResearchFocus, setEvidenceResearchFocus] = useState("");
+  const [evidenceSeedUrlsText, setEvidenceSeedUrlsText] = useState("");
   const [isCreateDecisionOpen, setIsCreateDecisionOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
@@ -67,6 +71,8 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
   const [isSubmittingOption, setIsSubmittingOption] = useState(false);
   const [isSubmittingCriterion, setIsSubmittingCriterion] = useState(false);
   const [isSubmittingEvidence, setIsSubmittingEvidence] = useState(false);
+  const [isGeneratingCriteria, setIsGeneratingCriteria] = useState(false);
+  const [isGeneratingEvidence, setIsGeneratingEvidence] = useState(false);
   const [isGeneratingAssumptions, setIsGeneratingAssumptions] = useState(false);
   const [isGeneratingTradeoffMatrix, setIsGeneratingTradeoffMatrix] =
     useState(false);
@@ -101,6 +107,12 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
     null,
   );
+  const [criterionSuccessMessage, setCriterionSuccessMessage] = useState<
+    string | null
+  >(null);
+  const [evidenceSuccessMessage, setEvidenceSuccessMessage] = useState<
+    string | null
+  >(null);
   const [assumptionSuccessMessage, setAssumptionSuccessMessage] = useState<
     string | null
   >(null);
@@ -116,6 +128,8 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
 
   const activeDecision =
     decisions.find((decision) => decision.id === activeDecisionId) ?? null;
+  const canGenerateCriteria = !!activeDecision;
+  const canGenerateEvidence = !!activeDecision;
   const canGenerateAssumptions =
     !!activeDecision && options.length > 0 && criteria.length > 0;
   const canRegenerateSelectedAssumptions =
@@ -210,6 +224,10 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
       setOptionErrorMessage(null);
       setCriterionErrorMessage(null);
       setEvidenceErrorMessage(null);
+      setCriterionSuccessMessage(null);
+      setEvidenceSuccessMessage(null);
+      setEvidenceResearchFocus("");
+      setEvidenceSeedUrlsText("");
       setAssumptionErrorMessage(null);
       setTradeoffMatrixErrorMessage(null);
       setAdversarialReviewErrorMessage(null);
@@ -491,7 +509,7 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     }
 
     const confirmed = window.confirm(
-      `Delete decision "${activeDecision.title}"? This removes its options, criteria, assumptions, and tradeoff matrix.`,
+      `Delete decision "${activeDecision.title}"? This removes its options, criteria, assumptions, evidence, tradeoff matrix, adversarial review, and recommendation memo.`,
     );
     if (!confirmed) {
       return;
@@ -588,6 +606,7 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
 
     setIsSubmittingCriterion(true);
     setCriterionErrorMessage(null);
+    setCriterionSuccessMessage(null);
 
     try {
       const response = await fetch(
@@ -630,6 +649,7 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
 
     setIsSubmittingEvidence(true);
     setEvidenceErrorMessage(null);
+    setEvidenceSuccessMessage(null);
 
     try {
       const response = await fetch(
@@ -713,6 +733,126 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
       setEvidenceErrorMessage(
         error instanceof Error ? error.message : "Failed to delete evidence.",
       );
+    }
+  }
+
+  async function generateCriteria() {
+    if (!activeDecisionId || !canGenerateCriteria) {
+      return;
+    }
+
+    setIsGeneratingCriteria(true);
+    setCriterionErrorMessage(null);
+    setCriterionSuccessMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/criteria/generate`),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            count: parseGenerationCount(criteriaGenerationCount, 5),
+            replace_existing: true,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        let detail = `Failed to generate criteria (${response.status})`;
+
+        try {
+          const payload = (await response.json()) as { detail?: string };
+          if (payload.detail) {
+            detail = payload.detail;
+          }
+        } catch {
+          // Fall back to generic status error.
+        }
+
+        throw new Error(detail);
+      }
+
+      const payload = (await response.json()) as {
+        replaced_existing: boolean;
+        criteria: CriterionRecord[];
+      };
+      setCriteria(payload.criteria);
+      setCriterionSuccessMessage(
+        payload.replaced_existing
+          ? "Generated a fresh AI-backed criteria draft and replaced the previous set."
+          : "Generated an initial AI-backed criteria draft.",
+      );
+      await loadDecisions(activeDecisionId);
+    } catch (error) {
+      setCriterionErrorMessage(
+        error instanceof Error ? error.message : "Failed to generate criteria.",
+      );
+    } finally {
+      setIsGeneratingCriteria(false);
+    }
+  }
+
+  async function generateEvidence() {
+    if (!activeDecisionId || !canGenerateEvidence) {
+      return;
+    }
+
+    setIsGeneratingEvidence(true);
+    setEvidenceErrorMessage(null);
+    setEvidenceSuccessMessage(null);
+
+    try {
+      const response = await fetch(
+        apiUrl(`/api/v1/decisions/${activeDecisionId}/evidence/generate`),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            count: parseGenerationCount(evidenceGenerationCount, 4),
+            replace_existing: false,
+            research_focus: evidenceResearchFocus.trim() || null,
+            seed_urls: parseSeedUrls(evidenceSeedUrlsText),
+            allow_web_search: true,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        let detail = `Failed to generate evidence (${response.status})`;
+
+        try {
+          const payload = (await response.json()) as { detail?: string };
+          if (payload.detail) {
+            detail = payload.detail;
+          }
+        } catch {
+          // Fall back to generic status error.
+        }
+
+        throw new Error(detail);
+      }
+
+      const payload = (await response.json()) as {
+        web_sources_consulted: number;
+        web_queries: string[];
+        evidence: EvidenceRecord[];
+      };
+      setEvidence(payload.evidence);
+      setEvidenceSuccessMessage(
+        `Generated ${parseGenerationCount(evidenceGenerationCount, 4)} evidence items from ${payload.web_sources_consulted} fetched web sources.`,
+      );
+      await loadDecisions(activeDecisionId);
+    } catch (error) {
+      setEvidenceErrorMessage(
+        error instanceof Error ? error.message : "Failed to generate evidence.",
+      );
+    } finally {
+      setIsGeneratingEvidence(false);
     }
   }
 
@@ -1077,6 +1217,10 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     optionDraft,
     criterionDraft,
     evidenceDraft,
+    criteriaGenerationCount,
+    evidenceGenerationCount,
+    evidenceResearchFocus,
+    evidenceSeedUrlsText,
     isCreateDecisionOpen,
     isLoading,
     isLoadingOptions,
@@ -1090,6 +1234,8 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     isSubmittingOption,
     isSubmittingCriterion,
     isSubmittingEvidence,
+    isGeneratingCriteria,
+    isGeneratingEvidence,
     isGeneratingAssumptions,
     isGeneratingTradeoffMatrix,
     isGeneratingAdversarialReview,
@@ -1105,11 +1251,15 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     adversarialReviewErrorMessage,
     recommendationMemoErrorMessage,
     exportErrorMessage,
+    criterionSuccessMessage,
+    evidenceSuccessMessage,
     assumptionSuccessMessage,
     tradeoffMatrixSuccessMessage,
     adversarialReviewSuccessMessage,
     recommendationMemoSuccessMessage,
     exportSuccessMessage,
+    canGenerateCriteria,
+    canGenerateEvidence,
     canGenerateAssumptions,
     canRegenerateSelectedAssumptions,
     canGenerateTradeoffMatrix,
@@ -1123,6 +1273,10 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     setOptionDraft,
     setCriterionDraft,
     setEvidenceDraft,
+    setCriteriaGenerationCount,
+    setEvidenceGenerationCount,
+    setEvidenceResearchFocus,
+    setEvidenceSeedUrlsText,
     openCreateDecisionModal,
     closeCreateDecisionModal,
     createDecision,
@@ -1133,6 +1287,8 @@ export function useDecisionWorkspace(): DecisionWorkspaceController {
     deleteCriterion,
     createEvidence,
     deleteEvidence,
+    generateCriteria,
+    generateEvidence,
     generateAssumptions,
     toggleAssumptionSelection,
     selectAllAssumptions,
@@ -1152,4 +1308,20 @@ function downloadBlob(blob: Blob, filename: string) {
   anchor.download = filename;
   anchor.click();
   window.URL.revokeObjectURL(url);
+}
+
+function parseGenerationCount(value: string, fallback: number): number {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(7, Math.max(1, parsed));
+}
+
+function parseSeedUrls(value: string): string[] {
+  return value
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter((item, index, array) => item.length > 0 && array.indexOf(item) === index);
 }

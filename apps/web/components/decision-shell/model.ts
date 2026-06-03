@@ -71,6 +71,12 @@ export type EvidenceRecord = {
   title: string;
   summary: string;
   source: string;
+  source_type: "manual" | "ai_lead" | "web_capture";
+  source_url: string | null;
+  source_query: string | null;
+  excerpt: string | null;
+  retrieved_at: string | null;
+  retrieval_agent: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -265,6 +271,10 @@ export type DecisionWorkspaceController = {
   optionDraft: CreateOptionPayload;
   criterionDraft: CreateCriterionPayload;
   evidenceDraft: CreateEvidencePayload;
+  criteriaGenerationCount: string;
+  evidenceGenerationCount: string;
+  evidenceResearchFocus: string;
+  evidenceSeedUrlsText: string;
   isCreateDecisionOpen: boolean;
   isLoading: boolean;
   isLoadingOptions: boolean;
@@ -278,6 +288,8 @@ export type DecisionWorkspaceController = {
   isSubmittingOption: boolean;
   isSubmittingCriterion: boolean;
   isSubmittingEvidence: boolean;
+  isGeneratingCriteria: boolean;
+  isGeneratingEvidence: boolean;
   isGeneratingAssumptions: boolean;
   isGeneratingTradeoffMatrix: boolean;
   isGeneratingAdversarialReview: boolean;
@@ -293,11 +305,15 @@ export type DecisionWorkspaceController = {
   adversarialReviewErrorMessage: string | null;
   recommendationMemoErrorMessage: string | null;
   exportErrorMessage: string | null;
+  criterionSuccessMessage: string | null;
+  evidenceSuccessMessage: string | null;
   assumptionSuccessMessage: string | null;
   tradeoffMatrixSuccessMessage: string | null;
   adversarialReviewSuccessMessage: string | null;
   recommendationMemoSuccessMessage: string | null;
   exportSuccessMessage: string | null;
+  canGenerateCriteria: boolean;
+  canGenerateEvidence: boolean;
   canGenerateAssumptions: boolean;
   canRegenerateSelectedAssumptions: boolean;
   canGenerateTradeoffMatrix: boolean;
@@ -311,6 +327,10 @@ export type DecisionWorkspaceController = {
   setOptionDraft: Dispatch<SetStateAction<CreateOptionPayload>>;
   setCriterionDraft: Dispatch<SetStateAction<CreateCriterionPayload>>;
   setEvidenceDraft: Dispatch<SetStateAction<CreateEvidencePayload>>;
+  setCriteriaGenerationCount: Dispatch<SetStateAction<string>>;
+  setEvidenceGenerationCount: Dispatch<SetStateAction<string>>;
+  setEvidenceResearchFocus: Dispatch<SetStateAction<string>>;
+  setEvidenceSeedUrlsText: Dispatch<SetStateAction<string>>;
   openCreateDecisionModal: () => void;
   closeCreateDecisionModal: () => void;
   createDecision: () => Promise<void>;
@@ -321,6 +341,8 @@ export type DecisionWorkspaceController = {
   deleteCriterion: (criterionId: string) => Promise<void>;
   createEvidence: () => Promise<void>;
   deleteEvidence: (evidenceId: string) => Promise<void>;
+  generateCriteria: () => Promise<void>;
+  generateEvidence: () => Promise<void>;
   generateAssumptions: () => Promise<void>;
   toggleAssumptionSelection: (assumptionId: string) => void;
   selectAllAssumptions: () => void;
