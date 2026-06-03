@@ -3,6 +3,14 @@ model_list:
     litellm_params:
       model: gemini/gemini-2.5-flash
       api_key: os.environ/GEMINI_API_KEY
+  - model_name: tradeofflab-gemini
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: tradeofflab-qwen-local
+    litellm_params:
+      model: os.environ/OLLAMA_LITELLM_MODEL
+      api_base: os.environ/OLLAMA_BASE_URL
 
 litellm_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

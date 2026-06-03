@@ -196,6 +196,29 @@ Why we still chose it:
 - Every MVP needs a default path
 - The architecture still keeps the provider pluggable
 
+## Why Ollama And Qwen As The Local Model Path
+
+Choice:
+
+- Ollama with Qwen as the primary local model path behind LiteLLM
+
+Why:
+
+- It keeps the existing provider abstraction intact
+- It reduces dependence on paid external APIs during local iteration
+- It gives the repository a realistic offline-capable development mode for bounded orchestration work
+
+Tradeoffs accepted:
+
+- Structured output reliability is weaker than Gemini, so the backend needs a compatible JSON-object fallback
+- Local inference speed and quality depend heavily on the contributor's machine
+- The model still needs to be pulled and managed locally
+
+Why we still chose it:
+
+- The product benefits from a genuinely local-first path
+- It is the least disruptive way to add local inference without rewriting the orchestration layer
+
 ## Why Alembic
 
 Choice:

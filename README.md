@@ -167,7 +167,7 @@ RecommendationMemo
 
 ## AI Architecture
 
-TradeOffLab should use deterministic AI pipelines with structured outputs, not autonomous agents.
+TradeOffLab should use deterministic AI pipelines with structured outputs, not autonomous agents. Bounded role-based orchestration is acceptable when it remains finite, inspectable, and tied to explicit workspace actions.
 
 Target orchestration (steps are independent endpoints today; no single `runDecisionAnalysis()` yet):
 
@@ -176,7 +176,8 @@ runDecisionAnalysis()            # not implemented as one call yet
 |- captureDecisionFrame()        # manual CRUD today
 |- defineOptions()               # manual CRUD today
 |- defineCriteria()              # manual CRUD today
-|- generateAssumptions()          # implemented
+|- generateAssumptions()         # implemented
+|- generateEvidence()            # implemented with bounded web research
 |- generateTradeoffMatrix()      # implemented
 |- generateAdversarialReview()   # implemented
 '- generateRecommendationMemo()  # implemented
@@ -214,6 +215,7 @@ AI Layer:
 
 - LiteLLM
 - Gemini Flash as default MVP model
+- Qwen via Ollama as optional local model path
 - strict structured JSON outputs
 
 Infrastructure:
@@ -351,11 +353,27 @@ Contract tests mock LiteLLM HTTP responses and stub generation services with in-
 ## Getting Started
 
 1. Copy `.env.example` to `.env`
-2. Set `GEMINI_API_KEY`
+2. Set `GEMINI_API_KEY` if you want the Gemini path
 3. Run `docker compose up --build`
 4. Open `http://localhost:3000`
 5. Check the API at `http://localhost:8000/api/v1/health`
 6. Check the LiteLLM proxy at `http://localhost:4000`
+
+For a local Qwen path through Ollama:
+
+1. Run `docker compose --profile local-llm up --build`
+2. Pull the model once with `docker compose exec ollama ollama pull qwen3:8b`
+3. Set `LITELLM_MODEL=tradeofflab-qwen-local`
+4. Set `LITELLM_RESPONSE_FORMAT_STRATEGY=json_object`
+
+GPU options for Ollama:
+
+1. Native host Ollama on Windows is the simplest GPU path. According to the official Ollama Windows docs, native Windows supports NVIDIA and AMD Radeon GPUs. In that setup:
+   `OLLAMA_BASE_URL=http://host.docker.internal:11434`
+   Run Ollama on the host and keep `litellm`/`api` in Docker.
+2. Dockerized Ollama with NVIDIA GPU is supported on Linux and on Windows with WSL2, but requires the NVIDIA Container Toolkit. Start it with:
+   `docker compose -f docker-compose.yml -f docker-compose.ollama-gpu.yml --profile local-llm up --build`
+3. For AMD in Docker, Ollama documents a separate Linux-oriented path using ROCm or Vulkan. This repo does not enable that automatically; the recommended Windows path for AMD is native Ollama on the host.
 
 The default stack uses the official stable LiteLLM image:
 
@@ -381,7 +399,7 @@ Useful API paths in the current build:
 - `GET /api/v1/decisions/{decision_id}/export/json`
 - `GET /api/v1/decisions/{decision_id}/export/markdown`
 - Nested CRUD: `.../options`, `.../criteria`, `.../assumptions`, `.../evidence`
-- Generation: `POST .../assumptions/generate`, `.../tradeoff-matrix/generate`, `.../adversarial-review/generate`, `.../recommendation-memo/generate`
+- Generation: `POST .../criteria/generate`, `.../evidence/generate`, `.../assumptions/generate`, `.../tradeoff-matrix/generate`, `.../adversarial-review/generate`, `.../recommendation-memo/generate`
 - Artifacts: `GET .../tradeoff-matrix`, `.../adversarial-review`, `.../recommendation-memo`
 
 See `docs/ARCHITECTURE.md` and `docs/AUDIT.md` for module boundaries and gap analysis.
@@ -394,14 +412,20 @@ Variables that matter for the current local stack:
 - `LITELLM_MASTER_KEY`: secures the local LiteLLM proxy
 - `LITELLM_API_KEY`: the credential the backend will use when calling LiteLLM
 - `GEMINI_API_KEY`: the upstream provider key LiteLLM uses to reach Gemini
+- `OLLAMA_BASE_URL`: where LiteLLM can reach Ollama when using the local Qwen path
+- `OLLAMA_LITELLM_MODEL`: LiteLLM model string for the local Ollama target
+- `OLLAMA_IMAGE`: container image for the local Ollama service; defaults to `ollama/ollama:latest`
+- `LITELLM_RESPONSE_FORMAT_STRATEGY`: use `json_schema` for Gemini and `json_object` for local Ollama/Qwen
+- `WEB_RESEARCH_SEARCH_PROVIDER`: search backend used by evidence research; defaults to `duckduckgo_html`
 
 Current implementation status:
 
 - Workspace UI covers Overview, Options, Criteria, Assumptions, Evidence, Tradeoffs, Adversarial Review, Recommendation, and Export
 - Postgres persistence for all core MVP entities except `Claim` and `DecisionTrace`
-- Schema-validated AI generation for assumptions, tradeoff matrix, adversarial review, and recommendation memo
+- Schema-validated AI generation for criteria, evidence, assumptions, tradeoff matrix, adversarial review, and recommendation memo
 - Markdown and JSON dossier export
-- LiteLLM proxy with Gemini as the default upstream provider
+- LiteLLM proxy with Gemini as the default upstream provider and optional Ollama/Qwen local routing
+- Evidence generation upgraded from source leads to bounded web research with persisted URLs, excerpts, and queries
 
 Still open for Phase 1 completion:
 

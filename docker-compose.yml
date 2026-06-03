@@ -20,11 +20,23 @@ services:
     environment:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-tradeofflab-dev-key}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_LITELLM_MODEL: ${OLLAMA_LITELLM_MODEL:-ollama/qwen3:8b}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${LITELLM_PROXY_PORT:-4000}:4000"
     volumes:
       - ./docker/litellm/config.yaml:/app/config.yaml:ro
     command: ["--config", "/app/config.yaml", "--port", "4000"]
+
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    profiles: ["local-llm"]
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
 
   api:
     build:
@@ -37,6 +49,11 @@ services:
       LITELLM_BASE_URL: ${LITELLM_BASE_URL}
       LITELLM_MODEL: ${LITELLM_MODEL}
       LITELLM_API_KEY: ${LITELLM_API_KEY:-tradeofflab-dev-key}
+      LITELLM_TIMEOUT_SECONDS: ${LITELLM_TIMEOUT_SECONDS:-180}
+      LITELLM_RESPONSE_FORMAT_STRATEGY: ${LITELLM_RESPONSE_FORMAT_STRATEGY:-json_schema}
+      WEB_RESEARCH_SEARCH_PROVIDER: ${WEB_RESEARCH_SEARCH_PROVIDER:-duckduckgo_html}
+      WEB_RESEARCH_TIMEOUT_SECONDS: ${WEB_RESEARCH_TIMEOUT_SECONDS:-20}
+      WEB_RESEARCH_USER_AGENT: ${WEB_RESEARCH_USER_AGENT:-TradeOffLabBot/0.1}
     depends_on:
       db:
         condition: service_healthy
@@ -67,3 +84,4 @@ services:
 
 volumes:
   postgres_data:
+  ollama_data:
