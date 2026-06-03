@@ -80,3 +80,68 @@ def minimal_assumption_payload():
             )
         ]
     )
+
+
+@pytest.fixture
+def minimal_criteria_payload():
+    from app.domain.criterion import CriterionCreate, CriterionMeasurementType
+    from app.services.criteria_generation import GeneratedCriteriaPayload
+
+    return GeneratedCriteriaPayload(
+        criteria=[
+            CriterionCreate(
+                name="Operational complexity",
+                description="Measure migration, observability, reliability, and day-two operational burden.",
+                weight=0.55,
+                measurement_type=CriterionMeasurementType.QUALITATIVE,
+            ),
+            CriterionCreate(
+                name="Economic efficiency",
+                description="Measure cost exposure across infrastructure, licensing, and support.",
+                weight=0.45,
+                measurement_type=CriterionMeasurementType.NUMERIC,
+            ),
+        ]
+    )
+
+
+@pytest.fixture
+def minimal_evidence_payload():
+    from datetime import UTC, datetime
+
+    from app.domain.evidence import EvidenceCreate, EvidenceSourceType
+    from app.services.evidence_generation import GeneratedEvidencePayload, ReviewedEvidencePayload
+
+    now = datetime.now(UTC)
+
+    generated = GeneratedEvidencePayload(
+        evidence=[
+            EvidenceCreate(
+                title="Managed service SLA comparison",
+                summary="Compare uptime commitments, backup posture, and maintenance windows across shortlisted providers.",
+                source="Vendor SLA documentation",
+                source_type=EvidenceSourceType.WEB_CAPTURE,
+                source_url="https://example.com/vendor-sla",
+                source_query="managed service database SLA comparison",
+                excerpt="The provider documents uptime commitments, maintenance windows, and backup posture.",
+                retrieved_at=now,
+                retrieval_agent="researcher",
+            ),
+            EvidenceCreate(
+                title="Three-year TCO baseline",
+                summary="Estimate infrastructure, licensing, staffing, and migration costs across the candidate options.",
+                source="Cloud pricing and licensing analysis",
+                source_type=EvidenceSourceType.WEB_CAPTURE,
+                source_url="https://example.com/tco-analysis",
+                source_query="database total cost ownership licensing managed service",
+                excerpt="The article compares infrastructure, licensing, and staffing costs over three years.",
+                retrieved_at=now,
+                retrieval_agent="researcher",
+            ),
+        ]
+    )
+    reviewed = ReviewedEvidencePayload(evidence=generated.evidence)
+    return {
+        "generated": generated,
+        "reviewed": reviewed,
+    }

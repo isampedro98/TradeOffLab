@@ -25,36 +25,78 @@ from app.services.assumption_generation import (
     AssumptionGenerationService,
     GeneratedAssumptionsPayload,
 )
+from app.services.criteria_generation import (
+    CriteriaGenerationRequest,
+    CriteriaGenerationService,
+    GeneratedCriteriaPayload,
+)
+from app.services.evidence_generation import (
+    EvidenceResearchPlan,
+    EvidenceGenerationRequest,
+    EvidenceGenerationService,
+    GeneratedEvidencePayload,
+    PlannedResearchQuery,
+    ReviewedEvidencePayload,
+)
 from app.services.recommendation_memo_generation import (
     GeneratedRecommendationMemoPayload,
     RecommendationMemoGenerationRequest,
     RecommendationMemoGenerationService,
 )
 from app.services.tradeoff_matrix_generation import (
-    GeneratedTradeoffMatrixPayload,
+    GeneratedTradeoffAssessmentPayload,
     TradeoffMatrixGenerationRequest,
     TradeoffMatrixGenerationService,
 )
 from tests.stub_litellm_client import StubLiteLLMClient
 
 
-def _build_tradeoff_payload(decision_id: str) -> GeneratedTradeoffMatrixPayload:
-    options = build_bootstrap_options(decision_id)
-    criteria = build_bootstrap_criteria(decision_id)
-    assessments = [
-        TradeoffAssessmentCreate(
-            criterion_id=criterion.id,
-            option_id=option.id,
-            score=3.0,
-            rationale=f"Assessment for {criterion.name} vs {option.name}.",
+class StubSearchProvider:
+    provider_name = "stub-search"
+
+    def __init__(self, documents_by_query: dict[str, list[tuple[str, str]]]) -> None:
+        self.documents_by_query = documents_by_query
+
+    def search(self, *, query: str, max_results: int):
+        from app.services.web_research import SearchResult
+
+        return [
+            SearchResult(
+                title=title,
+                url=url,
+                snippet=f"Snippet for {title}",
+                provider=self.provider_name,
+                rank=index + 1,
+                query=query,
+            )
+            for index, (title, url) in enumerate(self.documents_by_query.get(query, [])[:max_results])
+        ]
+
+
+class StubPageFetcher:
+    def __init__(self, excerpts_by_url: dict[str, str]) -> None:
+        self.excerpts_by_url = excerpts_by_url
+
+    def fetch(self, *, url: str, query: str | None = None, rank: int | None = None):
+        from datetime import UTC, datetime
+
+        from app.services.web_research import RetrievedDocument
+
+        return RetrievedDocument(
+            title=f"Fetched {url}",
+            url=url,
+            excerpt=self.excerpts_by_url[url],
+            query=query,
+            provider="stub-search",
+            rank=rank,
+            retrieved_at=datetime.now(UTC),
         )
-        for criterion in criteria
-        for option in options
-    ]
-    return GeneratedTradeoffMatrixPayload(
-        summary="PostgreSQL leads on ecosystem fit with acceptable operational cost.",
-        scoring_scale_label="1 = weak fit, 5 = strong fit",
-        assessments=assessments,
+
+
+def _build_tradeoff_assessment_payload() -> GeneratedTradeoffAssessmentPayload:
+    return GeneratedTradeoffAssessmentPayload(
+        score=3.0,
+        rationale="Balanced fit for this criterion given the current decision state.",
     )
 
 
@@ -94,23 +136,30 @@ def test_assumption_generation_persists_stubbed_response(
     assert len(stub.calls) == 1
     user_content = stub.calls[0]["messages"][1]["content"]
     assert "Generate exactly 1 assumptions" in user_content
-    assert seeded_decision in user_content
+    assert '"context_summary"' in user_content
+    assert '"criteria"' in user_content
 
 
 def test_tradeoff_matrix_generation_validates_full_grid(
     db_session: Session,
     seeded_decision: str,
 ) -> None:
-    payload = _build_tradeoff_payload(seeded_decision)
-    assessments = payload.assessments
-    assessments.pop()
-    incomplete = GeneratedTradeoffMatrixPayload(
-        summary=payload.summary,
-        scoring_scale_label=payload.scoring_scale_label,
-        assessments=assessments,
-    )
-    stub = StubLiteLLMClient(responses={GeneratedTradeoffMatrixPayload: incomplete})
+    decision = build_bootstrap_decision()
+    options = build_bootstrap_options(seeded_decision)
+    criteria = build_bootstrap_criteria(seeded_decision)
+    incomplete = [
+        TradeoffAssessmentCreate(
+            criterion_id=criterion.id,
+            option_id=option.id,
+            score=3.0,
+            rationale=f"Assessment for {criterion.name} vs {option.name}.",
+        )
+        for criterion in criteria
+        for option in options
+    ][:-1]
+    stub = StubLiteLLMClient(responses={GeneratedTradeoffAssessmentPayload: _build_tradeoff_assessment_payload()})
     service = TradeoffMatrixGenerationService(db_session, client=stub)
+    service._generate_assessments = lambda **_: incomplete  # type: ignore[method-assign]
 
     with pytest.raises(ValueError, match="every criterion-option pair"):
         service.generate_for_decision(
@@ -123,9 +172,8 @@ def test_tradeoff_matrix_generation_persists_stubbed_response(
     db_session: Session,
     seeded_decision: str,
 ) -> None:
-    payload = _build_tradeoff_payload(seeded_decision)
     stub = StubLiteLLMClient(
-        responses={GeneratedTradeoffMatrixPayload: payload},
+        responses={GeneratedTradeoffAssessmentPayload: _build_tradeoff_assessment_payload()},
         model="stub-tradeoffs",
     )
     service = TradeoffMatrixGenerationService(db_session, client=stub)
@@ -137,8 +185,95 @@ def test_tradeoff_matrix_generation_persists_stubbed_response(
 
     assert response.matrix.model == "stub-tradeoffs"
     assert len(response.matrix.assessments) == 12
-    assert "PostgreSQL leads" in response.matrix.summary
-    assert stub.calls[0]["response_model"] is GeneratedTradeoffMatrixPayload
+    assert "Weighted scoring currently favors" in response.matrix.summary
+    assert len(stub.calls) == 12
+    assert stub.calls[0]["response_model"] is GeneratedTradeoffAssessmentPayload
+
+
+def test_criteria_generation_replaces_existing_set(
+    db_session: Session,
+    seeded_decision: str,
+    minimal_criteria_payload: GeneratedCriteriaPayload,
+) -> None:
+    stub = StubLiteLLMClient(
+        responses={GeneratedCriteriaPayload: minimal_criteria_payload},
+        model="stub-criteria",
+    )
+    service = CriteriaGenerationService(db_session, client=stub)
+
+    response = service.generate_for_decision(
+        seeded_decision,
+        CriteriaGenerationRequest(count=2, replace_existing=True),
+    )
+
+    assert response.model == "stub-criteria"
+    assert response.replaced_existing is True
+    assert len(response.criteria) == 2
+    assert abs(sum(criterion.weight for criterion in response.criteria) - 1.0) < 0.001
+    assert stub.calls[0]["response_model"] is GeneratedCriteriaPayload
+    assert "Generate exactly 2 criteria" in stub.calls[0]["messages"][1]["content"]
+
+
+def test_evidence_generation_persists_stubbed_response(
+    db_session: Session,
+    seeded_decision: str,
+    minimal_evidence_payload: dict[str, GeneratedEvidencePayload | ReviewedEvidencePayload],
+) -> None:
+    stub = StubLiteLLMClient(
+        responses={
+            EvidenceResearchPlan: EvidenceResearchPlan(
+                gaps=["Validate external benchmark claims."],
+                queries=[
+                    PlannedResearchQuery(
+                        query="managed service database SLA comparison",
+                        reason="Need current reliability and support posture across options.",
+                    )
+                ],
+                target_urls=[],
+            ),
+            GeneratedEvidencePayload: minimal_evidence_payload["generated"],
+            ReviewedEvidencePayload: minimal_evidence_payload["reviewed"],
+        },
+        model="stub-evidence",
+    )
+    service = EvidenceGenerationService(
+        db_session,
+        client=stub,
+        search_provider=StubSearchProvider(
+            {
+                "managed service database SLA comparison": [
+                    ("Vendor SLA", "https://example.com/vendor-sla"),
+                    ("TCO analysis", "https://example.com/tco-analysis"),
+                ]
+            }
+        ),
+        page_fetcher=StubPageFetcher(
+            {
+                "https://example.com/vendor-sla": "The provider documents uptime commitments and maintenance windows.",
+                "https://example.com/tco-analysis": "The article compares infrastructure, licensing, and staffing costs over three years.",
+            }
+        ),
+    )
+
+    response = service.generate_for_decision(
+        seeded_decision,
+        EvidenceGenerationRequest(
+            count=2,
+            research_focus="managed hosting maturity and TCO",
+            allow_web_search=True,
+        ),
+    )
+
+    assert response.model == "stub-evidence"
+    assert response.replaced_existing is False
+    assert response.agents_run == ["planner", "researcher", "synthesizer", "critic"]
+    assert response.web_sources_consulted == 2
+    assert len(response.evidence) == 2
+    assert response.evidence[0].source_url == "https://example.com/vendor-sla"
+    assert stub.calls[0]["response_model"] is EvidenceResearchPlan
+    assert stub.calls[1]["response_model"] is GeneratedEvidencePayload
+    assert stub.calls[2]["response_model"] is ReviewedEvidencePayload
+    assert "Generate exactly 2 evidence items" in stub.calls[1]["messages"][1]["content"]
 
 
 def test_adversarial_review_generation_requires_tradeoff_matrix(
@@ -164,7 +299,7 @@ def test_adversarial_review_generation_persists_stubbed_response(
     tradeoff_service = TradeoffMatrixGenerationService(
         db_session,
         client=StubLiteLLMClient(
-            responses={GeneratedTradeoffMatrixPayload: _build_tradeoff_payload(seeded_decision)},
+            responses={GeneratedTradeoffAssessmentPayload: _build_tradeoff_assessment_payload()},
         ),
     )
     tradeoff_service.generate_for_decision(
@@ -224,7 +359,7 @@ def test_recommendation_memo_generation_persists_stubbed_response(
     tradeoff_service = TradeoffMatrixGenerationService(
         db_session,
         client=StubLiteLLMClient(
-            responses={GeneratedTradeoffMatrixPayload: _build_tradeoff_payload(seeded_decision)},
+            responses={GeneratedTradeoffAssessmentPayload: _build_tradeoff_assessment_payload()},
         ),
     )
     tradeoff_service.generate_for_decision(

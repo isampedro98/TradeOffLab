@@ -26,6 +26,18 @@ def _completion_response(content: dict) -> dict:
     }
 
 
+def _raw_completion_response(content: str) -> dict:
+    return {
+        "choices": [
+            {
+                "message": {
+                    "content": content,
+                }
+            }
+        ]
+    }
+
+
 @patch("httpx.post")
 def test_generate_structured_sends_strict_json_schema_request(mock_post: MagicMock) -> None:
     mock_post.return_value = MagicMock(
@@ -39,6 +51,7 @@ def test_generate_structured_sends_strict_json_schema_request(mock_post: MagicMo
         model="tradeofflab-test",
         timeout_seconds=5.0,
     )
+    client.response_format_strategy = "json_schema"
 
     result = client.generate_structured(
         messages=[{"role": "user", "content": "Return JSON."}],
@@ -86,6 +99,32 @@ def test_generate_structured_raises_on_http_error(mock_post: MagicMock) -> None:
 
 
 @patch("httpx.post")
+def test_generate_structured_supports_json_object_strategy(mock_post: MagicMock) -> None:
+    mock_post.return_value = MagicMock(
+        status_code=200,
+        raise_for_status=MagicMock(),
+        json=lambda: _completion_response({"answer": "object-mode"}),
+    )
+    client = LiteLLMClient(
+        base_url="http://litellm.test",
+        api_key="test-key",
+        model="tradeofflab-test",
+    )
+    client.response_format_strategy = "json_object"
+
+    result = client.generate_structured(
+        messages=[{"role": "user", "content": "Return JSON."}],
+        response_model=SampleStructuredOutput,
+    )
+
+    assert result.answer == "object-mode"
+    call_kwargs = mock_post.call_args.kwargs
+    assert call_kwargs["json"]["response_format"] == {"type": "json_object"}
+    assert call_kwargs["json"]["messages"][0]["role"] == "system"
+    assert "JSON Schema" in call_kwargs["json"]["messages"][0]["content"]
+
+
+@patch("httpx.post")
 def test_generate_structured_raises_on_empty_content(mock_post: MagicMock) -> None:
     mock_post.return_value = MagicMock(
         status_code=200,
@@ -123,6 +162,48 @@ def test_generate_structured_raises_on_invalid_json(mock_post: MagicMock) -> Non
             messages=[{"role": "user", "content": "Return JSON."}],
             response_model=SampleStructuredOutput,
         )
+
+
+@patch("httpx.post")
+def test_generate_structured_extracts_json_from_markdown_fence(mock_post: MagicMock) -> None:
+    mock_post.return_value = MagicMock(
+        status_code=200,
+        raise_for_status=MagicMock(),
+        json=lambda: _raw_completion_response('```json\n{"answer":"fenced"}\n```'),
+    )
+    client = LiteLLMClient(
+        base_url="http://litellm.test",
+        api_key="test-key",
+        model="tradeofflab-test",
+    )
+
+    result = client.generate_structured(
+        messages=[{"role": "user", "content": "Return JSON."}],
+        response_model=SampleStructuredOutput,
+    )
+
+    assert result.answer == "fenced"
+
+
+@patch("httpx.post")
+def test_generate_structured_extracts_json_from_text_wrapper(mock_post: MagicMock) -> None:
+    mock_post.return_value = MagicMock(
+        status_code=200,
+        raise_for_status=MagicMock(),
+        json=lambda: _raw_completion_response('Here is the result: {"answer":"wrapped"} Thanks.'),
+    )
+    client = LiteLLMClient(
+        base_url="http://litellm.test",
+        api_key="test-key",
+        model="tradeofflab-test",
+    )
+
+    result = client.generate_structured(
+        messages=[{"role": "user", "content": "Return JSON."}],
+        response_model=SampleStructuredOutput,
+    )
+
+    assert result.answer == "wrapped"
 
 
 @patch("httpx.post")

@@ -29,12 +29,16 @@ class StubLiteLLMClient(LiteLLMClient):
         messages: list[dict[str, Any]],
         response_model: type[BaseModel],
         temperature: float = 0.2,
+        max_tokens: int | None = None,
+        allow_repair: bool = True,
     ) -> BaseModel:
         self.calls.append(
             {
                 "messages": messages,
                 "response_model": response_model,
                 "temperature": temperature,
+                "max_tokens": max_tokens,
+                "allow_repair": allow_repair,
             }
         )
         if response_model not in self.responses:
