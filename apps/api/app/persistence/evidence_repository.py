@@ -40,6 +40,12 @@ class EvidenceRepository:
             title=payload.title,
             summary=payload.summary,
             source=payload.source,
+            source_type=payload.source_type,
+            source_url=payload.source_url,
+            source_query=payload.source_query,
+            excerpt=payload.excerpt,
+            retrieved_at=payload.retrieved_at,
+            retrieval_agent=payload.retrieval_agent,
             created_at=now,
             updated_at=now,
         )
@@ -48,6 +54,35 @@ class EvidenceRepository:
         self.session.commit()
         self.session.refresh(record)
         return self._to_domain(record)
+
+    def create_many(
+        self,
+        decision_id: str,
+        payloads: list[EvidenceCreate],
+    ) -> list[Evidence]:
+        now = datetime.now(UTC)
+        records = [
+            EvidenceRecord(
+                id=f"evidence-{uuid4().hex}",
+                decision_id=decision_id,
+                title=payload.title,
+                summary=payload.summary,
+                source=payload.source,
+                source_type=payload.source_type,
+                source_url=payload.source_url,
+                source_query=payload.source_query,
+                excerpt=payload.excerpt,
+                retrieved_at=payload.retrieved_at,
+                retrieval_agent=payload.retrieval_agent,
+                created_at=now,
+                updated_at=now,
+            )
+            for payload in payloads
+        ]
+        self.session.add_all(records)
+        self._touch_decision(decision_id, timestamp=now)
+        self.session.commit()
+        return [self._to_domain(record) for record in records]
 
     def update(self, decision_id: str, evidence_id: str, payload: EvidenceUpdate) -> Evidence | None:
         statement = select(EvidenceRecord).where(
@@ -93,6 +128,12 @@ class EvidenceRepository:
             title=evidence.title,
             summary=evidence.summary,
             source=evidence.source,
+            source_type=evidence.source_type,
+            source_url=evidence.source_url,
+            source_query=evidence.source_query,
+            excerpt=evidence.excerpt,
+            retrieved_at=evidence.retrieved_at,
+            retrieval_agent=evidence.retrieval_agent,
             created_at=evidence.created_at,
             updated_at=evidence.updated_at,
         )
@@ -100,6 +141,41 @@ class EvidenceRepository:
         self.session.commit()
         self.session.refresh(record)
         return self._to_domain(record)
+
+    def replace_for_decision(
+        self,
+        decision_id: str,
+        payloads: list[EvidenceCreate],
+    ) -> list[Evidence]:
+        now = datetime.now(UTC)
+        existing_records = self.session.execute(
+            select(EvidenceRecord).where(EvidenceRecord.decision_id == decision_id)
+        ).scalars().all()
+        for record in existing_records:
+            self.session.delete(record)
+
+        records = [
+            EvidenceRecord(
+                id=f"evidence-{uuid4().hex}",
+                decision_id=decision_id,
+                title=payload.title,
+                summary=payload.summary,
+                source=payload.source,
+                source_type=payload.source_type,
+                source_url=payload.source_url,
+                source_query=payload.source_query,
+                excerpt=payload.excerpt,
+                retrieved_at=payload.retrieved_at,
+                retrieval_agent=payload.retrieval_agent,
+                created_at=now,
+                updated_at=now,
+            )
+            for payload in payloads
+        ]
+        self.session.add_all(records)
+        self._touch_decision(decision_id, timestamp=now)
+        self.session.commit()
+        return [self._to_domain(record) for record in records]
 
     def _touch_decision(self, decision_id: str, *, timestamp: datetime) -> None:
         decision = self.session.get(DecisionRecord, decision_id)
@@ -114,6 +190,12 @@ class EvidenceRepository:
             title=record.title,
             summary=record.summary,
             source=record.source,
+            source_type=record.source_type,
+            source_url=record.source_url,
+            source_query=record.source_query,
+            excerpt=record.excerpt,
+            retrieved_at=record.retrieved_at,
+            retrieval_agent=record.retrieval_agent,
             created_at=record.created_at,
             updated_at=record.updated_at,
         )
