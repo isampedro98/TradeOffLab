@@ -8,7 +8,13 @@ class Settings(BaseSettings):
     litellm_base_url: str = "http://litellm:4000"
     litellm_model: str = "tradeofflab-default"
     litellm_api_key: str = "tradeofflab-dev-key"
-    litellm_timeout_seconds: float = 60.0
+    litellm_timeout_seconds: float = 180.0
+    litellm_response_format_strategy: str = "json_schema"
+    web_research_user_agent: str = (
+        "TradeOffLabBot/0.1 (+https://github.com/tradeofflab/tradeofflab)"
+    )
+    web_research_timeout_seconds: float = 20.0
+    web_research_search_provider: str = "duckduckgo_html"
 
     model_config = SettingsConfigDict(
         env_file=".env",

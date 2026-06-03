@@ -39,6 +39,16 @@ from app.services.adversarial_review_generation import (
     AdversarialReviewGenerationResponse,
     AdversarialReviewGenerationService,
 )
+from app.services.criteria_generation import (
+    CriteriaGenerationRequest,
+    CriteriaGenerationResponse,
+    CriteriaGenerationService,
+)
+from app.services.evidence_generation import (
+    EvidenceGenerationRequest,
+    EvidenceGenerationResponse,
+    EvidenceGenerationService,
+)
 from app.services.litellm_client import LiteLLMError
 from app.services.decision_export import DecisionDossierExport, DecisionExportService
 from app.services.recommendation_memo_generation import (
@@ -202,6 +212,42 @@ def create_decision_evidence(
     return repository.create(decision_id, payload)
 
 
+@router.post(
+    "/{decision_id}/evidence/generate",
+    response_model=EvidenceGenerationResponse,
+)
+def generate_decision_evidence(
+    decision_id: str,
+    payload: EvidenceGenerationRequest,
+    session: Session = Depends(get_db_session),
+) -> EvidenceGenerationResponse:
+    require_decision(session, decision_id)
+    service = EvidenceGenerationService(session)
+    try:
+        return service.generate_for_decision(decision_id, payload)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
+    except LiteLLMError as error:
+        detail = str(error)
+        if error.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            detail = (
+                "The configured AI provider is rate-limiting this workspace right now. "
+                "Retry later or check the upstream provider behind LiteLLM."
+            )
+        raise HTTPException(
+            status_code=error.status_code,
+            detail=detail,
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Evidence generation failed: {error}",
+        ) from error
+
+
 @router.get("/{decision_id}/evidence/{evidence_id}", response_model=Evidence)
 def get_decision_evidence(
     decision_id: str,
@@ -354,6 +400,42 @@ def create_decision_criterion(
     return repository.create(decision_id, payload)
 
 
+@router.post(
+    "/{decision_id}/criteria/generate",
+    response_model=CriteriaGenerationResponse,
+)
+def generate_decision_criteria(
+    decision_id: str,
+    payload: CriteriaGenerationRequest,
+    session: Session = Depends(get_db_session),
+) -> CriteriaGenerationResponse:
+    require_decision(session, decision_id)
+    service = CriteriaGenerationService(session)
+    try:
+        return service.generate_for_decision(decision_id, payload)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
+    except LiteLLMError as error:
+        detail = str(error)
+        if error.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            detail = (
+                "The configured AI provider is rate-limiting this workspace right now. "
+                "Retry later or check the upstream provider behind LiteLLM."
+            )
+        raise HTTPException(
+            status_code=error.status_code,
+            detail=detail,
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Criteria generation failed: {error}",
+        ) from error
+
+
 @router.get("/{decision_id}/criteria/{criterion_id}", response_model=Criterion)
 def get_decision_criterion(
     decision_id: str,
@@ -472,7 +554,7 @@ def generate_decision_tradeoff_matrix(
         if error.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
             detail = (
                 "The configured AI provider is rate-limiting this workspace right now. "
-                "Retry later or check the Gemini quota behind LiteLLM."
+                "Retry later or check the upstream provider behind LiteLLM."
             )
         raise HTTPException(
             status_code=error.status_code,
@@ -540,7 +622,7 @@ def generate_decision_adversarial_review(
         if error.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
             detail = (
                 "The configured AI provider is rate-limiting this workspace right now. "
-                "Retry later or check the Gemini quota behind LiteLLM."
+                "Retry later or check the upstream provider behind LiteLLM."
             )
         raise HTTPException(
             status_code=error.status_code,
@@ -576,7 +658,7 @@ def generate_decision_recommendation_memo(
         if error.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
             detail = (
                 "The configured AI provider is rate-limiting this workspace right now. "
-                "Retry later or check the Gemini quota behind LiteLLM."
+                "Retry later or check the upstream provider behind LiteLLM."
             )
         raise HTTPException(
             status_code=error.status_code,
@@ -612,7 +694,7 @@ def generate_decision_assumptions(
         if error.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
             detail = (
                 "The configured AI provider is rate-limiting this workspace right now. "
-                "Retry later or check the Gemini quota behind LiteLLM."
+                "Retry later or check the upstream provider behind LiteLLM."
             )
         raise HTTPException(
             status_code=error.status_code,

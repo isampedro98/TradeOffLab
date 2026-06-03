@@ -50,6 +50,30 @@ class CriterionRepository:
         self.session.refresh(record)
         return self._to_domain(record)
 
+    def create_many(
+        self,
+        decision_id: str,
+        payloads: list[CriterionCreate],
+    ) -> list[Criterion]:
+        now = datetime.now(UTC)
+        records = [
+            CriterionRecord(
+                id=f"criterion-{uuid4().hex}",
+                decision_id=decision_id,
+                name=payload.name,
+                description=payload.description,
+                weight=payload.weight,
+                measurement_type=payload.measurement_type,
+                created_at=now,
+                updated_at=now,
+            )
+            for payload in payloads
+        ]
+        self.session.add_all(records)
+        self._touch_decision(decision_id, timestamp=now)
+        self.session.commit()
+        return [self._to_domain(record) for record in records]
+
     def update(
         self,
         decision_id: str,
@@ -110,6 +134,36 @@ class CriterionRepository:
         self.session.commit()
         self.session.refresh(record)
         return self._to_domain(record)
+
+    def replace_for_decision(
+        self,
+        decision_id: str,
+        payloads: list[CriterionCreate],
+    ) -> list[Criterion]:
+        now = datetime.now(UTC)
+        existing_records = self.session.execute(
+            select(CriterionRecord).where(CriterionRecord.decision_id == decision_id)
+        ).scalars().all()
+        for record in existing_records:
+            self.session.delete(record)
+
+        records = [
+            CriterionRecord(
+                id=f"criterion-{uuid4().hex}",
+                decision_id=decision_id,
+                name=payload.name,
+                description=payload.description,
+                weight=payload.weight,
+                measurement_type=payload.measurement_type,
+                created_at=now,
+                updated_at=now,
+            )
+            for payload in payloads
+        ]
+        self.session.add_all(records)
+        self._touch_decision(decision_id, timestamp=now)
+        self.session.commit()
+        return [self._to_domain(record) for record in records]
 
     def _touch_decision(self, decision_id: str, *, timestamp: datetime) -> None:
         decision = self.session.get(DecisionRecord, decision_id)

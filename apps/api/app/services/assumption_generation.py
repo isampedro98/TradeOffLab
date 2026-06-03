@@ -140,6 +140,8 @@ class AssumptionGenerationService:
         return self.client.generate_structured(
             messages=base_messages,
             response_model=GeneratedAssumptionsPayload,
+            temperature=0.1,
+            max_tokens=700,
         )
 
     @staticmethod
@@ -153,25 +155,49 @@ class AssumptionGenerationService:
         selected_assumptions: list[Assumption],
     ) -> list[dict[str, str]]:
         decision_snapshot = {
-            "decision": decision.model_dump(mode="json"),
-            "options": [option.model_dump(mode="json") for option in options],
-            "criteria": [criterion.model_dump(mode="json") for criterion in criteria],
+            "decision": {
+                "title": decision.title,
+                "decision_brief": _truncate_text(decision.decision_brief, limit=180),
+                "question": _truncate_text(decision.question, limit=220),
+                "context_summary": _truncate_text(decision.context, limit=320),
+            },
+            "options": [
+                {
+                    "name": option.name,
+                    "description": _truncate_text(option.description, limit=120),
+                }
+                for option in options
+            ],
+            "criteria": [
+                {
+                    "name": criterion.name,
+                    "weight": criterion.weight,
+                    "measurement_type": criterion.measurement_type.value,
+                    "description": _truncate_text(criterion.description, limit=110),
+                }
+                for criterion in criteria
+            ],
             "existing_assumptions": [
-                assumption.model_dump(mode="json") for assumption in existing_assumptions
+                {
+                    "statement": _truncate_text(assumption.statement, limit=140),
+                    "confidence": assumption.confidence.value,
+                }
+                for assumption in existing_assumptions[:7]
             ],
         }
 
         user_instruction = (
             f"Generate exactly {count} assumptions for this decision. "
             "Each assumption must include statement, confidence, impact_if_false, "
-            "and validation_method. Keep them concrete and testable.\n\n"
+            "and validation_method. Keep them concrete, short, and testable. "
+            "Use confidence only from: low, medium, high.\n\n"
         )
         if selected_assumptions:
             user_instruction = (
                 f"Regenerate exactly {count} replacement assumptions for this decision. "
                 "Only replace the selected assumptions. Keep the overall set diverse, "
                 "avoid duplicating the preserved assumptions, and return only the new replacement assumptions.\n\n"
-                f"Selected assumptions to replace:\n{json.dumps([assumption.model_dump(mode='json') for assumption in selected_assumptions], indent=2)}\n\n"
+                f"Selected assumptions to replace:\n{json.dumps([_serialize_assumption(assumption) for assumption in selected_assumptions], indent=2)}\n\n"
             )
 
         return [
@@ -180,7 +206,7 @@ class AssumptionGenerationService:
                 "content": (
                     "You are generating structured assumptions for TradeOffLab, an AI-assisted "
                     "decision engineering workspace. Produce concise, criticizable assumptions "
-                    "grounded in the supplied decision state. Do not return markdown."
+                    "grounded in the supplied decision state. Do not return markdown or commentary."
                 ),
             },
             {
@@ -188,3 +214,19 @@ class AssumptionGenerationService:
                 "content": user_instruction + json.dumps(decision_snapshot, indent=2),
             },
         ]
+
+
+def _serialize_assumption(assumption: Assumption) -> dict[str, str]:
+    return {
+        "statement": _truncate_text(assumption.statement, limit=140),
+        "confidence": assumption.confidence.value,
+        "impact_if_false": _truncate_text(assumption.impact_if_false, limit=160),
+        "validation_method": _truncate_text(assumption.validation_method, limit=160),
+    }
+
+
+def _truncate_text(value: str, *, limit: int) -> str:
+    normalized = " ".join(value.split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 3].rstrip() + "..."

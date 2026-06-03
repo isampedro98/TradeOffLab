@@ -140,12 +140,66 @@ class RecommendationMemoGenerationService:
         adversarial_review: AdversarialReview,
     ) -> GeneratedRecommendationMemoPayload:
         decision_snapshot = {
-            "decision": decision.model_dump(mode="json"),
-            "options": [option.model_dump(mode="json") for option in options],
-            "criteria": [criterion.model_dump(mode="json") for criterion in criteria],
-            "assumptions": [assumption.model_dump(mode="json") for assumption in assumptions],
-            "tradeoff_matrix": tradeoff_matrix.model_dump(mode="json"),
-            "adversarial_review": adversarial_review.model_dump(mode="json"),
+            "decision": {
+                "title": decision.title,
+                "question": _truncate_text(decision.question, limit=180),
+                "context_summary": _truncate_text(decision.context, limit=180),
+            },
+            "options": [
+                {
+                    "option_id": option.id,
+                    "name": option.name,
+                    "description": _truncate_text(option.description, limit=70),
+                }
+                for option in options
+            ],
+            "criteria": [
+                {
+                    "criterion_id": criterion.id,
+                    "name": criterion.name,
+                    "weight": criterion.weight,
+                }
+                for criterion in criteria
+            ],
+            "assumptions": [
+                {
+                    "statement": _truncate_text(assumption.statement, limit=80),
+                    "confidence": assumption.confidence.value,
+                }
+                for assumption in assumptions[:4]
+            ],
+            "tradeoff_matrix": {
+                "summary": _truncate_text(tradeoff_matrix.summary, limit=220),
+                "best_assessments": [
+                    _serialize_assessment(assessment)
+                    for assessment in sorted(
+                        tradeoff_matrix.assessments,
+                        key=lambda item: item.score,
+                        reverse=True,
+                    )[:4]
+                ],
+                "worst_assessments": [
+                    _serialize_assessment(assessment)
+                    for assessment in sorted(
+                        tradeoff_matrix.assessments,
+                        key=lambda item: item.score,
+                    )[:4]
+                ],
+            },
+            "adversarial_review": {
+                "summary": _truncate_text(adversarial_review.summary, limit=220),
+                "overall_risk": adversarial_review.overall_risk.value,
+                "findings": [
+                    {
+                        "title": _truncate_text(finding.title, limit=60),
+                        "severity": finding.severity.value,
+                        "critique": _truncate_text(finding.critique, limit=90),
+                        "consequence": _truncate_text(finding.consequence, limit=90),
+                        "mitigation_test": _truncate_text(finding.mitigation_test, limit=90),
+                    }
+                    for finding in adversarial_review.findings[:3]
+                ],
+            },
         }
 
         messages = [
@@ -156,6 +210,7 @@ class RecommendationMemoGenerationService:
                     "Choose one recommended option, optionally one fallback option, explain the rationale, "
                     "and state the conditions under which the recommendation should hold. "
                     "Use the adversarial review to temper confidence and conditions. "
+                    "Keep the rationale concise and the conditions specific. "
                     "Return only valid JSON."
                 ),
             },
@@ -163,7 +218,8 @@ class RecommendationMemoGenerationService:
                 "role": "user",
                 "content": (
                     "Generate a recommendation memo for this decision. "
-                    "Prefer concrete conditions and make the rationale traceable to the current decision state.\n\n"
+                    "Prefer concrete conditions and make the rationale traceable to the current decision state. "
+                    "Keep output short and direct.\n\n"
                     f"{json.dumps(decision_snapshot, indent=2)}"
                 ),
             },
@@ -172,4 +228,22 @@ class RecommendationMemoGenerationService:
         return self.client.generate_structured(
             messages=messages,
             response_model=GeneratedRecommendationMemoPayload,
+            temperature=0.1,
+            max_tokens=550,
         )
+
+
+def _serialize_assessment(assessment: object) -> dict[str, object]:
+    return {
+        "criterion_id": getattr(assessment, "criterion_id"),
+        "option_id": getattr(assessment, "option_id"),
+        "score": getattr(assessment, "score"),
+        "rationale": _truncate_text(getattr(assessment, "rationale"), limit=90),
+    }
+
+
+def _truncate_text(value: str, *, limit: int) -> str:
+    normalized = " ".join(value.split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 3].rstrip() + "..."
