@@ -65,6 +65,7 @@ def test_generate_structured_sends_strict_json_schema_request(mock_post: MagicMo
     assert call_kwargs["json"]["model"] == "tradeofflab-test"
     assert call_kwargs["json"]["temperature"] == 0.1
     assert call_kwargs["json"]["num_retries"] == 0
+    assert call_kwargs["timeout"] == 5.0
     response_format = call_kwargs["json"]["response_format"]
     assert response_format["type"] == "json_schema"
     assert response_format["json_schema"]["name"] == "SampleStructuredOutput"
@@ -72,6 +73,30 @@ def test_generate_structured_sends_strict_json_schema_request(mock_post: MagicMo
     assert "answer" in response_format["json_schema"]["schema"]["properties"]
     assert call_kwargs["headers"]["Authorization"] == "Bearer test-key"
     assert mock_post.call_args.args[0] == "http://litellm.test/v1/chat/completions"
+
+
+@patch("httpx.post")
+def test_generate_structured_supports_per_call_timeout_override(mock_post: MagicMock) -> None:
+    mock_post.return_value = MagicMock(
+        status_code=200,
+        raise_for_status=MagicMock(),
+        json=lambda: _completion_response({"answer": "override-timeout"}),
+    )
+    client = LiteLLMClient(
+        base_url="http://litellm.test",
+        api_key="test-key",
+        model="tradeofflab-test",
+        timeout_seconds=30.0,
+    )
+
+    result = client.generate_structured(
+        messages=[{"role": "user", "content": "Return JSON."}],
+        response_model=SampleStructuredOutput,
+        timeout_seconds=7.5,
+    )
+
+    assert result.answer == "override-timeout"
+    assert mock_post.call_args.kwargs["timeout"] == 7.5
 
 
 @patch("httpx.post")

@@ -1,6 +1,14 @@
 from datetime import UTC, datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class DecisionType(StrEnum):
+    FACTUAL_VERIFICATION = "factual_verification"
+    TRADEOFF_COMPARISON = "tradeoff_comparison"
+    STRATEGIC_DECISION = "strategic_decision"
+    DESIGN_REVIEW = "design_review"
 
 
 class Decision(BaseModel):

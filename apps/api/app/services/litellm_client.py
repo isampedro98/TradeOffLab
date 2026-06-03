@@ -41,6 +41,7 @@ class LiteLLMClient:
         temperature: float = 0.2,
         max_tokens: int | None = None,
         allow_repair: bool = True,
+        timeout_seconds: float | None = None,
     ) -> ResponseModelT:
         payload_messages = messages
         payload = {
@@ -77,6 +78,7 @@ class LiteLLMClient:
         response = self._post_with_retries(
             headers=headers,
             payload=payload,
+            timeout_seconds=timeout_seconds or self.timeout_seconds,
         )
 
         data = response.json()
@@ -117,6 +119,7 @@ class LiteLLMClient:
         *,
         headers: dict[str, str],
         payload: dict[str, Any],
+        timeout_seconds: float,
     ) -> httpx.Response:
         last_error: Exception | None = None
         retry_delays = (0.0, 0.75, 1.5)
@@ -129,7 +132,7 @@ class LiteLLMClient:
                     f"{self.base_url}/v1/chat/completions",
                     headers=headers,
                     json=payload,
-                    timeout=self.timeout_seconds,
+                    timeout=timeout_seconds,
                 )
                 response.raise_for_status()
                 return response
@@ -238,4 +241,5 @@ class LiteLLMClient:
             temperature=0.0,
             max_tokens=900,
             allow_repair=False,
+            timeout_seconds=self.timeout_seconds,
         )

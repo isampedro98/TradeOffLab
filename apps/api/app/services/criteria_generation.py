@@ -3,6 +3,7 @@ import json
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.domain.criterion import Criterion, CriterionCreate
 from app.domain.decision import Decision
 from app.domain.option import Option
@@ -42,7 +43,9 @@ class CriteriaGenerationService:
         client: LiteLLMClient | None = None,
     ) -> None:
         self.session = session
-        self.client = client or LiteLLMClient()
+        self.client = client or LiteLLMClient(
+            timeout_seconds=settings.litellm_timeout_criteria_seconds
+        )
         self.criterion_repository = CriterionRepository(session)
         self.decision_repository = DecisionRepository(session)
         self.option_repository = OptionRepository(session)

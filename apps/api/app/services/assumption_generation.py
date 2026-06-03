@@ -3,6 +3,7 @@ import json
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.domain.assumption import Assumption, AssumptionCreate
 from app.domain.criterion import Criterion
 from app.domain.decision import Decision
@@ -45,7 +46,9 @@ class AssumptionGenerationService:
         client: LiteLLMClient | None = None,
     ) -> None:
         self.session = session
-        self.client = client or LiteLLMClient()
+        self.client = client or LiteLLMClient(
+            timeout_seconds=settings.litellm_timeout_assumptions_seconds
+        )
         self.assumption_repository = AssumptionRepository(session)
         self.criterion_repository = CriterionRepository(session)
         self.decision_repository = DecisionRepository(session)

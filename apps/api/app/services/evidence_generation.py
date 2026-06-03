@@ -5,6 +5,7 @@ import json
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.domain.assumption import Assumption
 from app.domain.criterion import Criterion
 from app.domain.decision import Decision
@@ -101,7 +102,9 @@ class EvidenceGenerationService:
         page_fetcher: PageFetcher | None = None,
     ) -> None:
         self.session = session
-        self.client = client or LiteLLMClient()
+        self.client = client or LiteLLMClient(
+            timeout_seconds=settings.litellm_timeout_evidence_seconds
+        )
         self.search_provider = search_provider or build_search_provider()
         self.page_fetcher = page_fetcher or build_page_fetcher()
         self.assumption_repository = AssumptionRepository(session)

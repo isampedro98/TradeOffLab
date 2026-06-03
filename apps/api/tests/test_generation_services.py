@@ -7,7 +7,7 @@ from app.domain.adversarial_review import (
 )
 from app.domain.assumption import AssumptionConfidence
 from app.domain.criterion import build_bootstrap_criteria
-from app.domain.decision import build_bootstrap_decision
+from app.domain.decision import DecisionType, build_bootstrap_decision
 from app.domain.option import build_bootstrap_options
 from app.domain.recommendation_memo import (
     RecommendationConditionCreate,
@@ -30,6 +30,7 @@ from app.services.criteria_generation import (
     CriteriaGenerationService,
     GeneratedCriteriaPayload,
 )
+from app.services.decision_context import CompactDecisionContext
 from app.services.evidence_generation import (
     EvidenceResearchPlan,
     EvidenceGenerationRequest,
@@ -188,6 +189,56 @@ def test_tradeoff_matrix_generation_persists_stubbed_response(
     assert "Weighted scoring currently favors" in response.matrix.summary
     assert len(stub.calls) == 12
     assert stub.calls[0]["response_model"] is GeneratedTradeoffAssessmentPayload
+
+
+def test_tradeoff_matrix_generation_retries_only_inconsistent_cell(
+    db_session: Session,
+    seeded_decision: str,
+) -> None:
+    stub = StubLiteLLMClient(
+        responses={
+            GeneratedTradeoffAssessmentPayload: [
+                GeneratedTradeoffAssessmentPayload(
+                    score=5.0,
+                    rationale="This option contradicts the criterion and is not supported.",
+                ),
+                GeneratedTradeoffAssessmentPayload(
+                    score=1.0,
+                    rationale="This option conflicts with the criterion, so it is a poor fit.",
+                ),
+            ]
+        },
+        model="stub-tradeoffs",
+    )
+    service = TradeoffMatrixGenerationService(db_session, client=stub)
+
+    assessment = service._generate_consistent_assessment(
+        compact_context=CompactDecisionContext(
+            question="Can the platform support this?",
+            decision_type=DecisionType.FACTUAL_VERIFICATION,
+            known_facts=[],
+            options=[],
+            criteria=[],
+            critical_assumptions=[],
+            evidence_summary=[],
+        ),
+        criterion_snapshot={
+            "criterion_id": "criterion-1",
+            "name": "Technical Feasibility",
+            "weight": 0.5,
+            "measurement_type": "boolean",
+            "description": "Tests whether the option is feasible.",
+        },
+        option_snapshot={
+            "option_id": "option-1",
+            "name": "Option A",
+            "description": "Option A",
+        },
+        factual_verification=None,
+    )
+
+    assert assessment.score == 1.0
+    assert len(stub.calls) == 2
 
 
 def test_criteria_generation_replaces_existing_set(

@@ -3,10 +3,12 @@ import json
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.domain.adversarial_review import AdversarialReview
 from app.domain.assumption import Assumption
 from app.domain.criterion import Criterion
 from app.domain.decision import Decision
+from app.domain.evidence import Evidence
 from app.domain.option import Option
 from app.domain.recommendation_memo import (
     RecommendationConditionCreate,
@@ -19,9 +21,11 @@ from app.persistence.adversarial_review_repository import AdversarialReviewRepos
 from app.persistence.assumption_repository import AssumptionRepository
 from app.persistence.criterion_repository import CriterionRepository
 from app.persistence.decision_repository import DecisionRepository
+from app.persistence.evidence_repository import EvidenceRepository
 from app.persistence.option_repository import OptionRepository
 from app.persistence.recommendation_memo_repository import RecommendationMemoRepository
 from app.persistence.tradeoff_matrix_repository import TradeoffMatrixRepository
+from app.services.decision_context import build_compact_decision_context
 from app.services.litellm_client import LiteLLMClient
 
 
@@ -56,11 +60,14 @@ class RecommendationMemoGenerationService:
         client: LiteLLMClient | None = None,
     ) -> None:
         self.session = session
-        self.client = client or LiteLLMClient()
+        self.client = client or LiteLLMClient(
+            timeout_seconds=settings.litellm_timeout_recommendation_memo_seconds
+        )
         self.adversarial_review_repository = AdversarialReviewRepository(session)
         self.assumption_repository = AssumptionRepository(session)
         self.criterion_repository = CriterionRepository(session)
         self.decision_repository = DecisionRepository(session)
+        self.evidence_repository = EvidenceRepository(session)
         self.option_repository = OptionRepository(session)
         self.recommendation_memo_repository = RecommendationMemoRepository(session)
         self.tradeoff_matrix_repository = TradeoffMatrixRepository(session)
@@ -77,6 +84,7 @@ class RecommendationMemoGenerationService:
         options = self.option_repository.list_for_decision(decision_id)
         criteria = self.criterion_repository.list_for_decision(decision_id)
         assumptions = self.assumption_repository.list_for_decision(decision_id)
+        evidence = self.evidence_repository.list_for_decision(decision_id)
         tradeoff_matrix = self.tradeoff_matrix_repository.get_for_decision(decision_id)
         adversarial_review = self.adversarial_review_repository.get_for_decision(decision_id)
 
@@ -97,7 +105,13 @@ class RecommendationMemoGenerationService:
             options=options,
             criteria=criteria,
             assumptions=assumptions,
+            evidence=evidence,
             tradeoff_matrix=tradeoff_matrix,
+            adversarial_review=adversarial_review,
+        )
+        generated = self._apply_recommendation_safeguards(
+            generated=generated,
+            options=options,
             adversarial_review=adversarial_review,
         )
 
@@ -136,15 +150,19 @@ class RecommendationMemoGenerationService:
         options: list[Option],
         criteria: list[Criterion],
         assumptions: list[Assumption],
+        evidence: list[Evidence],
         tradeoff_matrix: TradeoffMatrix,
         adversarial_review: AdversarialReview,
     ) -> GeneratedRecommendationMemoPayload:
+        compact_context = build_compact_decision_context(
+            decision=decision,
+            options=options,
+            criteria=criteria,
+            assumptions=assumptions,
+            evidence=evidence,
+        )
         decision_snapshot = {
-            "decision": {
-                "title": decision.title,
-                "question": _truncate_text(decision.question, limit=180),
-                "context_summary": _truncate_text(decision.context, limit=180),
-            },
+            "compact_context": compact_context.model_dump(mode="json"),
             "options": [
                 {
                     "option_id": option.id,
@@ -230,6 +248,49 @@ class RecommendationMemoGenerationService:
             response_model=GeneratedRecommendationMemoPayload,
             temperature=0.1,
             max_tokens=550,
+            timeout_seconds=settings.litellm_timeout_recommendation_memo_seconds,
+        )
+
+    def _apply_recommendation_safeguards(
+        self,
+        *,
+        generated: GeneratedRecommendationMemoPayload,
+        options: list[Option],
+        adversarial_review: AdversarialReview,
+    ) -> GeneratedRecommendationMemoPayload:
+        option_names = {option.id: option.name.lower() for option in options}
+        recommended_name = option_names.get(generated.recommended_option_id, "")
+        high_severity_findings = [
+            finding
+            for finding in adversarial_review.findings
+            if finding.severity.value == "high"
+            and recommended_name
+            and recommended_name in " ".join(
+                [finding.title.lower(), finding.critique.lower(), finding.consequence.lower()]
+            )
+        ]
+        if len(high_severity_findings) < 2:
+            return generated
+
+        adjusted_confidence = generated.confidence
+        if generated.confidence == RecommendationConfidence.HIGH:
+            adjusted_confidence = RecommendationConfidence.MEDIUM
+        elif generated.confidence == RecommendationConfidence.MEDIUM:
+            adjusted_confidence = RecommendationConfidence.LOW
+
+        conditions = list(generated.conditions)
+        safeguard_statement = (
+            "Recommendation requires explicit justification because multiple high-severity "
+            "adversarial findings target the selected option."
+        )
+        if safeguard_statement not in {condition.statement for condition in conditions}:
+            conditions.append(RecommendationConditionCreate(statement=safeguard_statement))
+
+        return generated.model_copy(
+            update={
+                "confidence": adjusted_confidence,
+                "conditions": conditions,
+            }
         )
 
 

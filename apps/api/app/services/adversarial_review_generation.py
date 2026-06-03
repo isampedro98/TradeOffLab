@@ -3,6 +3,7 @@ import json
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.domain.adversarial_review import (
     AdversarialReview,
     AdversarialReviewFindingCreate,
@@ -12,14 +13,17 @@ from app.domain.adversarial_review import (
 from app.domain.assumption import Assumption
 from app.domain.criterion import Criterion
 from app.domain.decision import Decision
+from app.domain.evidence import Evidence
 from app.domain.option import Option
 from app.domain.tradeoff_matrix import TradeoffMatrix
 from app.persistence.adversarial_review_repository import AdversarialReviewRepository
 from app.persistence.assumption_repository import AssumptionRepository
 from app.persistence.criterion_repository import CriterionRepository
 from app.persistence.decision_repository import DecisionRepository
+from app.persistence.evidence_repository import EvidenceRepository
 from app.persistence.option_repository import OptionRepository
 from app.persistence.tradeoff_matrix_repository import TradeoffMatrixRepository
+from app.services.decision_context import build_compact_decision_context
 from app.services.litellm_client import LiteLLMClient
 
 
@@ -52,11 +56,14 @@ class AdversarialReviewGenerationService:
         client: LiteLLMClient | None = None,
     ) -> None:
         self.session = session
-        self.client = client or LiteLLMClient()
+        self.client = client or LiteLLMClient(
+            timeout_seconds=settings.litellm_timeout_adversarial_review_seconds
+        )
         self.adversarial_review_repository = AdversarialReviewRepository(session)
         self.assumption_repository = AssumptionRepository(session)
         self.criterion_repository = CriterionRepository(session)
         self.decision_repository = DecisionRepository(session)
+        self.evidence_repository = EvidenceRepository(session)
         self.option_repository = OptionRepository(session)
         self.tradeoff_matrix_repository = TradeoffMatrixRepository(session)
 
@@ -72,6 +79,7 @@ class AdversarialReviewGenerationService:
         options = self.option_repository.list_for_decision(decision_id)
         criteria = self.criterion_repository.list_for_decision(decision_id)
         assumptions = self.assumption_repository.list_for_decision(decision_id)
+        evidence = self.evidence_repository.list_for_decision(decision_id)
         tradeoff_matrix = self.tradeoff_matrix_repository.get_for_decision(decision_id)
 
         if not options:
@@ -89,6 +97,7 @@ class AdversarialReviewGenerationService:
             options=options,
             criteria=criteria,
             assumptions=assumptions,
+            evidence=evidence,
             tradeoff_matrix=tradeoff_matrix,
         )
         review = self.adversarial_review_repository.replace_for_decision(
@@ -113,8 +122,16 @@ class AdversarialReviewGenerationService:
         options: list[Option],
         criteria: list[Criterion],
         assumptions: list[Assumption],
+        evidence: list[Evidence],
         tradeoff_matrix: TradeoffMatrix,
     ) -> GeneratedAdversarialReviewPayload:
+        compact_context = build_compact_decision_context(
+            decision=decision,
+            options=options,
+            criteria=criteria,
+            assumptions=assumptions,
+            evidence=evidence,
+        )
         option_names = {option.id: option.name for option in options}
         criterion_names = {criterion.id: criterion.name for criterion in criteria}
         weighted_option_scores = _build_weighted_option_scores(
@@ -127,27 +144,7 @@ class AdversarialReviewGenerationService:
             key=lambda assessment: (assessment.score, assessment.criterion_id, assessment.option_id),
         )[:3]
         decision_snapshot = {
-            "decision": {
-                "title": decision.title,
-                "question": _truncate_text(decision.question, limit=120),
-                "context_summary": _truncate_text(decision.context, limit=120),
-            },
-            "options": [option.name for option in options],
-            "criteria": [
-                {
-                    "name": criterion.name,
-                    "weight": criterion.weight,
-                    "measurement_type": criterion.measurement_type.value,
-                }
-                for criterion in criteria
-            ],
-            "assumptions": [
-                {
-                    "statement": _truncate_text(assumption.statement, limit=70),
-                    "confidence": assumption.confidence.value,
-                }
-                for assumption in assumptions[:4]
-            ],
+            "compact_context": compact_context.model_dump(mode="json"),
             "tradeoff_matrix": {
                 "summary": _truncate_text(tradeoff_matrix.summary, limit=160),
                 "weighted_option_scores": weighted_option_scores,
@@ -193,6 +190,7 @@ class AdversarialReviewGenerationService:
             response_model=GeneratedAdversarialReviewPayload,
             temperature=0.1,
             max_tokens=450,
+            timeout_seconds=settings.litellm_timeout_adversarial_review_seconds,
         )
 
 

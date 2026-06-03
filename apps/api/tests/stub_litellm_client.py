@@ -11,7 +11,7 @@ class StubLiteLLMClient(LiteLLMClient):
     def __init__(
         self,
         *,
-        responses: dict[type[BaseModel], BaseModel] | None = None,
+        responses: dict[type[BaseModel], BaseModel | list[BaseModel]] | None = None,
         model: str = "test-model",
     ) -> None:
         super().__init__(
@@ -31,6 +31,7 @@ class StubLiteLLMClient(LiteLLMClient):
         temperature: float = 0.2,
         max_tokens: int | None = None,
         allow_repair: bool = True,
+        timeout_seconds: float | None = None,
     ) -> BaseModel:
         self.calls.append(
             {
@@ -39,8 +40,14 @@ class StubLiteLLMClient(LiteLLMClient):
                 "temperature": temperature,
                 "max_tokens": max_tokens,
                 "allow_repair": allow_repair,
+                "timeout_seconds": timeout_seconds,
             }
         )
         if response_model not in self.responses:
             raise KeyError(f"No stub response registered for {response_model.__name__}")
-        return self.responses[response_model]
+        response = self.responses[response_model]
+        if isinstance(response, list):
+            if not response:
+                raise KeyError(f"No remaining stub responses registered for {response_model.__name__}")
+            return response.pop(0)
+        return response
